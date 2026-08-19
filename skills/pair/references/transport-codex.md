@@ -10,7 +10,7 @@ Codex側はSendMessage/ListAgents/Monitorに参加できないため、通信は
 
 ## 前提と制約
 
-- この体制の監視役はClaude(深い思考用モデル)、実装役がCodexチャット。逆は組めない。
+- この体制の監視役はClaude(深い思考用モデル)、実装役がCodexチャット。逆(Codex監視役×Claude実装役)とCodex同士は組まない。監視役は相手の報告・停滞へ受信駆動で即応する役割だが、CodexはSendMessage/Monitorに参加できず、ターン外では自発的に動けないため、監視が「ユーザーが毎回起こす」運用に退化する。
 - Codexはターン駆動で、ターンが終わるとユーザー入力なしに次ターンが始まらない。ただし
   **ターン継続中はshellのblocking watchでinboxを自分で監視できる**。実装役briefは
   「監視役の応答待ちではターンを終えず、inbox-watch(下記)を回す」ことを義務付けるため、
