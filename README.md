@@ -25,6 +25,13 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 3. **検証は自己申告ではなく証拠で** — 非自明な変更は、実装した本人とは別の文脈の
    レビュアーがgate制で検査する（`skills/independent-review/`）。実行していない
    コマンドを実行済みと報告しない、という規則が全体の土台にある。
+4. **検査は境界に置き、編集のたびには走らせない** — エージェントの編集1回ごとに
+   検査や注意喚起を挟む方式（エージェント側hookでの常時監査）は、コストが高いうえ、
+   繰り返される注意はすぐ効かなくなる。検査が走るのはcommit・push・公開という境界だけとする。
+   機械判定できる検査（絶対パス混入・秘密情報・日本語lint）はGit hookへ、
+   意味の検査（読みやすさ・整合性）は公開・提出前のレビューgate
+   （`skills/docs-maintenance/`）へ置く。エージェント固有のhook機構は、
+   合格を機械判定できる閉じたループの進行制御以外に使わない。
 
 ## 構成
 
@@ -33,6 +40,8 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── README.md
+├── .textlintrc.json         # 日本語文書lintの規則（pre-commitが参照）
+├── prh.yaml                 # 用語辞書（レビュー指摘から育てる）
 ├── docs/
 │   ├── instruction-placement.md
 │   ├── skill-authoring.md
@@ -126,6 +135,21 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 
 - `pre-commit` は、環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
   staged diffの追加行へ混入したcommitを拒否します。
+- `pre-commit` は続けて、リポジトリ直下に `.textlintrc.json` 等の設定を置いたリポジトリに
+  限り、staged対象の `.md` を [textlint](https://textlint.org/)（日本語の技術文書lint）で
+  検査します。規則はこのリポジトリの `.textlintrc.json`（文の長さ、冗長表現、漢字の連続
+  など）と `prh.yaml`（用語辞書）が実例で、opt-inするリポジトリへ複製して使います。
+<!-- textlint-disable prh -->（悪い例の引用のため、次の1文だけ用語辞書の検査を除外）
+  辞書には、レビューで実際に指摘された「読者に伝わらない語」（縮退→フォールバック等）を
+  登録し、同型の指摘が2件以上出た語を追加して育てます。
+<!-- textlint-enable prh -->
+  textlint未導入の環境では警告だけ出して通します。有効化は次の1回だけです。
+
+  ```bash
+  npm install -g textlint textlint-rule-preset-ja-technical-writing \
+    textlint-rule-prh textlint-filter-rule-comments
+  ```
+
 - `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
   秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
   pushを通します（`brew install gitleaks` で有効化）。

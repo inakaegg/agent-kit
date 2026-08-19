@@ -23,6 +23,8 @@ REQUIRED_FILES = [
     "skills/independent-review/assets/REVIEW_PROMPT.md",
     "git-hooks/pre-commit",
     "git-hooks/pre-push",
+    ".textlintrc.json",
+    "prh.yaml",
     "tests/test_public_bundle.py",
 ]
 
