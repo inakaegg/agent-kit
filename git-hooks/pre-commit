@@ -24,17 +24,26 @@ run_local_hook() {
   exit 0
 }
 
-# 日本語文書lint（textlint）。リポジトリ直下に設定ファイルを置いたリポジトリだけが
-# opt-inする。textlint未導入の環境では警告だけ出して通す（pre-pushのgitleaksと同じ
-# fail-open。検査対象はworking treeの内容で、部分stage時はstage内容と差が出得る）。
+# 日本語文書lint（textlint）。全リポジトリで既定有効。リポジトリ直下に設定が
+# あればそれを優先し、なければこのkit同梱の規則で検査する。opt-outは
+# git config --local hooks.skipTextlint true。textlint未導入の環境では警告だけ
+# 出して通す（pre-pushのgitleaksと同じfail-open。検査対象はworking treeの
+# 内容で、部分stage時はstage内容と差が出得る）。
 run_textlint() {
+  staged_md="$(git diff --cached --name-only --diff-filter=d -- '*.md')"
+  [ -n "$staged_md" ] || return 0
+  if [ "$(git config --type=bool --default=false hooks.skipTextlint)" = "true" ]; then
+    return 0
+  fi
   cfg=""
   for name in .textlintrc .textlintrc.json .textlintrc.yml .textlintrc.yaml; do
     if [ -f "$name" ]; then cfg="$name"; break; fi
   done
-  [ -n "$cfg" ] || return 0
-  staged_md="$(git diff --cached --name-only --diff-filter=d -- '*.md')"
-  [ -n "$staged_md" ] || return 0
+  if [ -z "$cfg" ]; then
+    kit_root="$(cd "$(dirname "$0")/.." && pwd -P)"
+    cfg="$kit_root/.textlintrc.json"
+    [ -f "$cfg" ] || return 0
+  fi
   if ! command -v textlint >/dev/null 2>&1; then
     echo "pre-commit: textlint未導入のため日本語lintを省略します（agent-kit READMEのGit hooks節を参照）。" >&2
     return 0
@@ -44,6 +53,7 @@ run_textlint() {
       echo ""
       echo "pre-commit: textlintの指摘があります。修正してから再commitしてください。"
       echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+      echo "  - 意図的に検査しないリポジトリでは: git config --local hooks.skipTextlint true"
     } >&2
     exit 1
   fi
