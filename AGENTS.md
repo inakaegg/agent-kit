@@ -114,7 +114,7 @@
 - 非自明な障害・回帰・状態問題：`$debug-loop`
 - heuristic・複数案・品質評価：`$evaluation-loop`
 - 長時間・大量件数・高cost作業：`$large-work`
-- 見えるUI変更：`$ui-verification`
+- 見えるUI変更の検証：`$ui-verification`。設計・実装込みの一貫UI作業：`$ui-quality`
 - 各gateの別context review：`$independent-review`
 - PR bot・CI・再reviewの反復：`$pr-review-loop`。CI失敗の修復：`$ci-fix`、特定パッケージの更新：`$dep-upgrade-safe`
 - README・SPEC・ROADMAP・docs再編：`$docs-maintenance`。設計資料・命名の前の対応表作成：`$semantic-generation`

@@ -5,6 +5,9 @@ description: Use when Web・nativeのlayout、component、style、interaction、
 
 # UI Verification
 
+本SkillはUI検証の正本である。設計・実装まで含む一貫したUI作業では `$ui-quality` を
+使い、その検証段階として本Skillの規定（起動経路、検証matrix、証跡）を適用する。
+
 ## 使用条件
 
 - layout、component、style、interaction、navigation、loading/error/empty stateを変更する

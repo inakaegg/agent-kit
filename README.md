@@ -53,6 +53,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   ├── pair/                # + assets/役割brief 3種 + references（transport-codex、設計ノート）
 │   ├── pr-review-loop/
 │   ├── semantic-generation/ # + references/referent-before-label.md
+│   ├── ui-quality/          # + references（web、native、audit-rubric）
 │   └── ui-verification/
 ├── templates/
 │   ├── ACTIVE_PLAN.md

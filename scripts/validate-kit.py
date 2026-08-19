@@ -38,6 +38,7 @@ EXPECTED_SKILLS = {
     "semantic-generation",
     "ci-fix",
     "dep-upgrade-safe",
+    "ui-quality",
 }
 
 
