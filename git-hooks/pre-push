@@ -38,6 +38,12 @@ while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
   [ "$local_sha" = "$zero" ] && continue # branch削除は走査対象なし
   if [ "$remote_sha" = "$zero" ]; then
     log_opts="$local_sha" # 初回push: 到達可能な全履歴
+  elif ! git cat-file -e "$remote_sha" 2>/dev/null; then
+    # 履歴書き換え(filter-repo等)の後はリモートの現在地がローカルに存在せず、
+    # 範囲指定が解決できない。gitleaksはそのgitエラーでもexit 0を返すため、
+    # 範囲走査のままでは1commitも見ずに素通しになる。全履歴走査へ切り替える。
+    echo "pre-push: リモートの現在地がローカルで解決できないため、全履歴を走査します。" >&2
+    log_opts="$local_sha"
   else
     log_opts="$remote_sha..$local_sha" # 既存branch: 送信するcommitだけ
   fi
