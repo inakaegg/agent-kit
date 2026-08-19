@@ -1,0 +1,58 @@
+#!/bin/sh
+# 環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
+# commit の追加行へ混入するのを防ぐグローバル pre-commit hook。
+#
+# 適用: git config --global core.hooksPath <このディレクトリ>
+# リポジトリ単位で意図的に許可する場合:
+#   git config --local hooks.allowLocalPaths true
+# このhookが拒否したcommitを --no-verify で通さないこと（共通AGENTS.md §5）。
+
+set -u
+
+# リポジトリ固有の .git/hooks/pre-commit があれば最後に委譲する。
+# --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
+run_local_hook() {
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  local_hook="$git_dir/hooks/pre-commit"
+  self="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
+  if [ -n "$git_dir" ] && [ -x "$local_hook" ]; then
+    local_real="$(cd "$(dirname "$local_hook")" 2>/dev/null && pwd -P)/pre-commit"
+    if [ "$local_real" != "$self" ]; then
+      exec "$local_hook" "$@"
+    fi
+  fi
+  exit 0
+}
+
+if [ "$(git config --type=bool --default=false hooks.allowLocalPaths)" = "true" ]; then
+  run_local_hook "$@"
+fi
+
+# 検出パターン: $HOME（symlink解決版も含む）と外部ボリューム配下。
+# パターン文字列は、このhook自身が検査（validate-kit・pre-commit）に
+# 検出されないよう分割して書く。
+home_real="$(cd "$HOME" 2>/dev/null && pwd -P || printf '%s' "$HOME")"
+pattern="$HOME|$home_real|/Vol""umes/"
+
+hits="$(git diff --cached --diff-filter=d -U0 --no-color \
+  | awk -v pat="$pattern" '
+      /^\+\+\+ b\// { file = substr($0, 7); next }
+      /^\+\+\+/ { next }
+      /^\+/ && $0 ~ pat { printf "  %s: %s\n", file, substr($0, 2) }
+    ')"
+
+if [ -n "$hits" ]; then
+  {
+    echo "pre-commit: 環境依存の絶対パスが追加行に含まれています。"
+    echo "$hits"
+    echo ""
+    echo "対応:"
+    echo "  - 相対パス、プレースホルダー、実行時解決（\$HOME 等）へ置き換える"
+    echo "  - このリポジトリで意図的に許可する場合:"
+    echo "      git config --local hooks.allowLocalPaths true"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+fi
+
+run_local_hook "$@"

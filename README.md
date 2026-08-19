@@ -13,7 +13,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 
 1. **規則は文書ではなく機械で強制する** — 規約文書（`AGENTS.md`）に書くだけでは、
    エージェントは従ったり従わなかったりする。そのため規約文書は入口に留め、破ると
-   失敗する検査（`scripts/validate-kit.py`、pre-commit hook、テスト）を本体とする。
+   失敗する検査（`scripts/validate-kit.py`、`git-hooks/` のpre-commit・pre-push、テスト）を本体とする。
    文章での注意が増えてきた規則は、lint・test・Hook・CIへ移す
    （置き場所の判定手順は `docs/instruction-placement.md`）。
 2. **完全自動ループは、合格を機械判定できる閉じたタスクに限る** — 一括migrationや
@@ -39,6 +39,9 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── policies/
 │       ├── agent-collaboration.md
 │       └── git-and-remote.md
+├── git-hooks/
+│   ├── pre-commit           # 環境依存の絶対パス混入をcommit時に拒否
+│   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
 ├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
 │   ├── debug-loop/
 │   ├── docs-maintenance/    # + references/documentation.md
@@ -106,6 +109,22 @@ for skill_dir in "$agent_kit_dir"/skills/*; do
   ln -s "$skill_dir" "$HOME/.claude/skills/$skill_name"
 done
 ```
+
+### Git hooks
+
+`git-hooks/` を全リポジトリ共通のhook置き場として `core.hooksPath` に設定します。
+
+```bash
+git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+```
+
+- `pre-commit` は、環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
+  staged diffの追加行へ混入したcommitを拒否します。
+- `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
+  秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
+  pushを通します（`brew install gitleaks` で有効化）。
+- リポジトリ固有の `.git/hooks/` がある場合は検査後に委譲します。意図的に絶対パスを
+  許可するリポジトリでは `git config --local hooks.allowLocalPaths true` を設定します。
 
 ### 個人環境ポリシー
 

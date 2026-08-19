@@ -62,8 +62,11 @@ class PublicBundleTests(unittest.TestCase):
             re.compile(r"\b" + "5237" + r"6271\b"),
         )
 
+        scanned_suffixes = {".md", ".py", ".sh", ".yaml"}
         for path in ROOT.rglob("*"):
-            if not path.is_file() or path.suffix not in {".md", ".py", ".sh", ".yaml"}:
+            if not path.is_file():
+                continue
+            if path.suffix not in scanned_suffixes and path.parent.name != "git-hooks":
                 continue
             text = path.read_text(encoding="utf-8")
             for pattern in forbidden:

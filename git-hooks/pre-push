@@ -1,0 +1,62 @@
+#!/bin/sh
+# push対象のcommit範囲をgitleaksで走査し、秘密情報らしき値を検出したら
+# pushを拒否するグローバル pre-push hook。
+#
+# 適用: git config --global core.hooksPath <このディレクトリ>
+# 初回push（remote側にbranchが無い場合）は到達可能な全履歴を走査する。
+# gitleaks未導入の環境では、導入方法を警告してpushは通す（fail-open）。
+# このhookが拒否したpushを --no-verify で通さないこと（共通AGENTS.md §5）。
+
+set -u
+
+zero=0000000000000000000000000000000000000000
+input="$(cat)"
+
+# リポジトリ固有の .git/hooks/pre-push があれば最後に委譲する。
+run_local_hook() {
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  local_hook="$git_dir/hooks/pre-push"
+  self="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
+  if [ -n "$git_dir" ] && [ -x "$local_hook" ]; then
+    local_real="$(cd "$(dirname "$local_hook")" 2>/dev/null && pwd -P)/pre-push"
+    if [ "$local_real" != "$self" ]; then
+      printf '%s\n' "$input" | "$local_hook" "$@"
+      exit $?
+    fi
+  fi
+  exit 0
+}
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-push: gitleaks未導入のため秘密情報の走査をスキップしました（brew install gitleaks で導入）" >&2
+  run_local_hook "$@"
+fi
+
+status=0
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "${local_ref:-}" ] && continue
+  [ "$local_sha" = "$zero" ] && continue # branch削除は走査対象なし
+  if [ "$remote_sha" = "$zero" ]; then
+    log_opts="$local_sha" # 初回push: 到達可能な全履歴
+  else
+    log_opts="$remote_sha..$local_sha" # 既存branch: 送信するcommitだけ
+  fi
+  if ! gitleaks git --no-banner --redact --log-opts "$log_opts" .; then
+    status=1
+  fi
+done <<EOF
+$input
+EOF
+
+if [ "$status" -ne 0 ]; then
+  {
+    echo ""
+    echo "pre-push: gitleaksが秘密情報らしき値を検出したためpushを中止しました。"
+    echo "  - 該当commitから値を除去する（履歴に入った場合は履歴の書き換えも検討）"
+    echo "  - 誤検知の場合は .gitleaksignore へfingerprintを追加する"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+fi
+
+run_local_hook "$@"

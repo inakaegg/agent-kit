@@ -21,6 +21,8 @@ REQUIRED_FILES = [
     "templates/VERIFICATION.md",
     "skills/docs-maintenance/references/documentation.md",
     "skills/independent-review/assets/REVIEW_PROMPT.md",
+    "git-hooks/pre-commit",
+    "git-hooks/pre-push",
     "tests/test_public_bundle.py",
 ]
 
@@ -129,14 +131,12 @@ def validate_no_private_source_copy() -> None:
         "personal handle": re.compile(r"\b" + "inaka" + r"egg\b", re.IGNORECASE),
         "personal account number": re.compile(r"\b" + "5237" + r"6271\b"),
     }
+    scanned_suffixes = {".md", ".py", ".sh", ".yaml", ".yml"}
     for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in {
-            ".md",
-            ".py",
-            ".sh",
-            ".yaml",
-            ".yml",
-        }:
+        if not path.is_file():
+            continue
+        # git-hooks配下は拡張子なし（pre-commit等）でも検査対象にする
+        if path.suffix not in scanned_suffixes and path.parent.name != "git-hooks":
             continue
         text = path.read_text(encoding="utf-8")
         for label, pattern in patterns.items():
