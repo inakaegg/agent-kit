@@ -116,8 +116,8 @@
 - 長時間・大量件数・高cost作業：`$large-work`
 - 見えるUI変更：`$ui-verification`
 - 各gateの別context review：`$independent-review`
-- PR bot・CI・再reviewの反復：`$pr-review-loop`
-- README・SPEC・ROADMAP・docs再編：`$docs-maintenance`
+- PR bot・CI・再reviewの反復：`$pr-review-loop`。CI失敗の修復：`$ci-fix`、特定パッケージの更新：`$dep-upgrade-safe`
+- README・SPEC・ROADMAP・docs再編：`$docs-maintenance`。設計資料・命名の前の対応表作成：`$semantic-generation`
 - 非自明なtaskの契約・active plan、project固有AGENTS・検証基盤の導入：`~/.codex/agent-kit/templates/TASK.md` と同directoryの `ACTIVE_PLAN.md`・`PROJECT_AGENTS.md`・`VERIFICATION.md`、`~/.codex/agent-kit/scripts/agent-check.example.sh` を雛形にする
 - 複数エージェントの並行作業(2チャット体制)：開始は `$pair`。片方のチャットにだけタスクを渡せば、相手役割の指示はSkillがSendMessageで送る
 - 新しい規則・手順の置き場所判断：`~/.codex/agent-kit/docs/instruction-placement.md`

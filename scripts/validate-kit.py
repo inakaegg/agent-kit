@@ -35,6 +35,9 @@ EXPECTED_SKILLS = {
     "independent-review",
     "pr-review-loop",
     "docs-maintenance",
+    "semantic-generation",
+    "ci-fix",
+    "dep-upgrade-safe",
 }
 
 

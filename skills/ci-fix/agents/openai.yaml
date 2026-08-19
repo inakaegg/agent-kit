@@ -1,0 +1,4 @@
+interface:
+  display_name: "CI Fix"
+  short_description: "Diagnose and fix a failing GitHub Actions run"
+  default_prompt: "Use $ci-fix to diagnose the failing CI run, find the first real error, and fix it on the PR branch."

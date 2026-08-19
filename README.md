@@ -43,13 +43,16 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   ├── pre-commit           # 環境依存の絶対パス混入をcommit時に拒否
 │   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
 ├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
+│   ├── ci-fix/
 │   ├── debug-loop/
+│   ├── dep-upgrade-safe/
 │   ├── docs-maintenance/    # + references/documentation.md
 │   ├── evaluation-loop/
 │   ├── independent-review/  # + assets/REVIEW_PROMPT.md
 │   ├── large-work/
 │   ├── pair/                # + assets/役割brief 3種 + references（transport-codex、設計ノート）
 │   ├── pr-review-loop/
+│   ├── semantic-generation/ # + references/referent-before-label.md
 │   └── ui-verification/
 ├── templates/
 │   ├── ACTIVE_PLAN.md
@@ -112,6 +115,8 @@ done
 
 ### Git hooks
 
+このhookはエージェント専用の機能ではなく、Gitの標準機構です。エージェントにも人間にも
+同じ規約を強制する最終防衛線としてキットに含めています。
 `git-hooks/` を全リポジトリ共通のhook置き場として `core.hooksPath` に設定します。
 
 ```bash

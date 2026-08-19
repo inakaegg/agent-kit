@@ -1,0 +1,4 @@
+interface:
+  display_name: "Semantic Generation"
+  short_description: "語より先に指示対象を固定して設計文書や命名を一貫して作る"
+  default_prompt: "$semantic-generation を使い、対応表を先に作ってからこの設計文書を書いてください。"

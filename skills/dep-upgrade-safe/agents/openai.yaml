@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safe Dependency Upgrade"
+  short_description: "Research breaking changes before upgrading npm packages"
+  default_prompt: "Use $dep-upgrade-safe to research breaking changes and safely upgrade the requested package."
