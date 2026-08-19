@@ -56,6 +56,7 @@ action：keep / update / merge / split / redirect / delete / internalize。
 - public/internal information leak
 - duplicate source of truth
 - stale future/past wording
+- 公開・提出する人間向け文書：`assets/DOCS_REVIEW_PROMPT.md` によるfresh contextの読みやすさレビュー（round 2既定、`VERDICT: LGTM` まで）
 
 新しく考えた仕様を、その同じcontextで過度に厳密なdocument testへ固定しない。fresh review後に、stableな意味だけをlint/CIで検査する。
 
