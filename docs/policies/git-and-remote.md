@@ -1,6 +1,6 @@
 # Git・remote状態の運用ポリシー
 
-この文書はGit、GitHub、registry、release、deploy等の作業を行うときだけ読む。project固有ルールとbranch protectionを優先する。
+この文書はGit、GitHub、registry、release、deploy等の作業のときだけ読む。project固有ルールとbranch protectionを優先する。
 
 ## 1. 作業開始前
 

@@ -117,7 +117,7 @@ review round N（round 1はfull diff、以降は修正差分と関連周辺）
 - 同じblocking findingが新しい証拠なく反復する場合は、roundを重ねず人間判断へ戻す。
 - 各roundは§1のfresh context・独立性と§3のreviewer contract（最大5件）をそのまま満たす。round数を増やす代わりにこれらを緩めない。
 - この上限はPRのbot・CI反復（`$pr-review-loop` の最大5iteration）とは別に数える。
-- 同型findingが2件以上なら、横断監査とmechanical check追加を行う。
+- 同型findingが2件以上なら、横断で監査し、mechanical checkを追加する。
 
 ## 7. stateと報告
 

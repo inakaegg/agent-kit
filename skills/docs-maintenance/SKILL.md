@@ -45,7 +45,7 @@ action：keep / update / merge / split / redirect / delete / internalize。
 - implementation、example、command、screenshot、README、SPECの意味を同期する。
 - 同じ技術detailを全文書へcopyしない。詳細の正本を1つにし、他はsummary/linkにする。
 - multilingual docsが正本として存在する場合、関連箇所を同じchangeで同期する。
-- rename/delete時は全参照を検索し、redirectまたはlink修正を行う。
+- rename/delete時は全参照を検索し、redirectを設置するか、linkを修正する。
 
 ## 5. validation
 

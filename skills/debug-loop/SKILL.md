@@ -22,7 +22,7 @@ description: Use when 原因が明白でないbug、回帰、flaky failure、非
 - root causeを確認する前にhardcode、delay追加、JSON整形回避、例外握り潰し等のquick fixを入れない。
 - error stringだけを原因の証拠にしない。code path、state、log、reproductionで裏付ける。
 - 観測事実、原因候補、未確認事項、利用者向け対処を分ける。
-- 1回の試行では、主仮説と予測する観測signalを一つに絞る。
+- 1回の試行では、主仮説と予測する観測signalを1つに絞る。
 
 ## 1. 症状と契約を固定する
 

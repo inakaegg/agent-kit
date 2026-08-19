@@ -46,7 +46,7 @@ git commitの対象にもしない(`_ai/` がgit管理下のrepositoryでは対�
   ユーザーへの促し依頼はwatchが切れているときのフォールバックに限る。
   完了判定: ユーザーへの依頼を出した。
 5C. **開始宣言の確認とrollout特定** — turnを終える前に、outboxへの追記を検知するMonitor
-  (またはuntilループのbackground実行)を必ず張る(張らずにturnを終えると相手の応答で
+  (untilループのbackground実行でもよい)を必ず張る(張らずにturnを終えると相手の応答で
   起こされる契機がない)。outboxの開始宣言を確認したら、宣言に含まれるrollout絶対pathを
   監査対象として記録する。pathが書かれていない場合は
   `grep -l <inboxの絶対path> ~/.codex/sessions/<YYYY/MM/DD>/rollout-*.jsonl`
