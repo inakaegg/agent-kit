@@ -1,0 +1,4 @@
+interface:
+  display_name: "Independent Review"
+  short_description: "非自明な変更を実装とは独立した文脈で厳密にレビュー"
+  default_prompt: "Use $independent-review to review this change from a fresh context."

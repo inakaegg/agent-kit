@@ -1,0 +1,4 @@
+interface:
+  display_name: "Large Work"
+  short_description: "長時間・大量・高コスト作業を段階実行し停止条件で管理"
+  default_prompt: "Use $large-work to design safe checkpoints for this large task."

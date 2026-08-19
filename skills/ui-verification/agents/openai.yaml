@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Verification"
+  short_description: "Web・ネイティブUIを実画面と重要状態の組合せで検証する"
+  default_prompt: "Use $ui-verification to verify this visible UI change."

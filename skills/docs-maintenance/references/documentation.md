@@ -1,0 +1,81 @@
+# 文書・仕様・内部メモのポリシー
+
+この文書は、README、SPEC、ROADMAP、ADR、公開docs、handoff、task fileを作成・再編するときだけ読む。
+
+## 1. 文書の役割を先に決める
+
+文書を変更する前に、次を明確にする。
+
+- 読者：製品利用者、library利用者、開発者、採用担当者、外部service担当者、個人の将来の自分
+- 目的：理解、利用、評価、再現、実装契約、将来計画、作業handoff
+- 時間軸：現在仕様、将来方針、過去の経緯、作業中状態
+- 詳細の正本：どの文書またはcode/schemaが唯一のsource of truthか
+
+## 2. 既定の置き場所
+
+projectが別構成を定めている場合はそれを優先する。定めがない場合：
+
+- 現在の公開仕様：`SPEC.md` または `docs/<feature>/SPEC.md`
+- 利用方法：READMEまたは`docs/<feature>/USAGE.md`
+- 設計判断と理由：`docs/decisions/` のADR
+- 将来方針：`ROADMAP.md`
+- project全体の入口：`README.md`
+- 未確定の内部task・仮説・handoff：`_ai/`
+- golden case・fixture：`tests/` 等のtest資産
+- agent向けproject固有規則：project `AGENTS.md`
+
+## 3. 新規文書を増やす条件
+
+- 先に既存のREADME、SPEC、ROADMAP、関連docsを読み、同じ役割の文書へ統合できないか確認する。
+- 内容が長い、またはユーザーが「仕様を書いて」と言ったことだけを、新規fileの理由にしない。
+- 異なる読者、独立した法務・運用用途、別の更新責任があり、既存文書へ入れると役割が混ざる場合だけ新設する。
+- 詳細仕様を複数文書で正として重複管理しない。他文書では要約とlinkに留める。
+- 改名・統合・削除では、参照link、index、test、古いfile名、重複説明を同じ変更内で更新する。
+
+## 4. 公開と非公開
+
+公開docsへ置いてよいもの：
+
+- 第三者が製品を理解、利用、評価、再現するための仕様・使い方・設計判断
+- 現在実装されている状態と既知の制限
+- 公開して問題のない検証方法と成果
+
+`_ai/`へ置くもの：
+
+- AI会話由来の未整理情報、個人メモ、調査途中、未確定の仮説
+- 収益化・公開戦略、paid differentiator、非公開task
+- local path、空き容量、一時測定、agentの作業都合
+- 次chat向けhandoff、active plan
+
+`_ai/`は個人projectではgit管理外を既定とする。teamで共有すべきexecution planは、projectが定めるversion管理されたplan directoryへ置いてよい。
+
+## 5. Issueの扱い
+
+- 個人開発では、追跡場所を増やすだけの目的でIssueを自動作成しない。
+- Issueは、複数人のassign、外部報告、Project/milestone、PR自動連携等の具体的利点がある場合に使う。
+- docsとIssueを併用する場合は正本を一つにし、同じchecklist・statusを二重管理しない。
+- reviewで見つけた将来課題は、解決策を確定せず、実害、再現、計測などの着手条件を添える。
+
+## 6. READMEと用語
+
+- READMEはrepositoryの入口であり、project目的に応じて製品価値、利用方法、demo、技術概要、導入、検証、制限を段階的に示す。
+- product/portfolioでは価値と評価の入口を先に、library/CLIではinstall、最小例、API、互換性を先に置ける。
+- 実装・debugだけに必要な詳細schemaや内部状態は分野別docsを正本とし、READMEでは意味とlinkを示す。
+- 一般的な技術用語を不自然に言い換えない。code identifier、API名、file名、公式名称を保持する。カタカナで定着した技術用語（フォールバック、ポーリング、タイムアウトなど）はそのまま使い、漢語への独自訳（縮退、起床など）を作らない。
+- 大量log・全件listは、結論、方法、件数、代表例、再現手順へ要約する。
+- 長い人間向け説明文書（設計ノート、解説、調査報告など）は、冒頭に人間が数十秒で把握できる箇条書きサマリーを置く。詳細本文はAI・精読者向けに残してよいが、サマリーだけで結論と主要な理由が伝わるようにする。
+
+## 7. 言語と同期
+
+- 本文はユーザーまたはproject指定がなければ日本語を正本とする。英語版が必要なら、内容を確定してから同期する。
+- `README.md` と `README.ja.md` の両方が正本として存在する場合は、関連箇所を両方更新する。
+- `CHANGELOG.md` は既存project規則を優先し、規則がなければ英語を既定とする。
+- docs更新は同じ文章を全文書へ複製することではない。読者と用途に合う粒度で製品上の意味を同期する。
+- API/tool文書は実装、version、signatureを確認してから書き、推測でparameter名を作らない。
+
+## 8. 文書の検証
+
+- link、file path、command例、option、正式名称が実在することを確認する。
+- 未reviewの新仕様を、同じcontextで直ちに厳密な文書testへ固定しない。別context review後に、安定して守るべき意味だけを機械検査する。
+- 文書の一文を固定するより、必要な意味、link、公式名称、安全条件を検査する。
+- public docsへuser prompt全文を自動転載しない。要件を必要十分に要約し、個人・内部情報を除く。

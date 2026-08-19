@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Review Loop"
+  short_description: "PRのレビュー指摘とCIを最新head単位で収束管理"
+  default_prompt: "Use $pr-review-loop to triage and converge this authorized PR."
