@@ -148,7 +148,9 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
   辞書には、レビューで実際に指摘された「読者に伝わらない語」（縮退→フォールバック等）を
   登録し、同型の指摘が2件以上出た語を追加して育てます。
 <!-- textlint-enable prh -->
-  textlint未導入の環境では警告だけ出して通します。有効化は次の1回だけです。
+  textlint未導入の環境では警告だけ出して通します。kit同梱の設定・辞書へ足してよいのは
+  全プロジェクトに通用する項目だけで、特定プロジェクトの都合で緩めたい場合は
+  そのリポジトリ直下の設定（上記の優先機構）で行います。有効化は次の1回だけです。
 
   ```bash
   npm install -g textlint textlint-rule-preset-ja-technical-writing \
