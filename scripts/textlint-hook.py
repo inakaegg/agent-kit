@@ -19,8 +19,9 @@ from pathlib import Path
 
 KIT_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_NAMES = (".textlintrc", ".textlintrc.json", ".textlintrc.yml", ".textlintrc.yaml")
-# エージェント専用の内部文書・一時置き場は対象外（人間向け文書だけを見る）
-SKIP_DIR_NAMES = {"_ai", "scratchpad", "tmp", "node_modules"}
+# エージェント専用の内部文書・一時置き場は対象外（人間向け文書だけを見る）。
+# .claude/.codex/.agents配下はメモリ・セッション記録などの内部文書のため除外する。
+SKIP_DIR_NAMES = {"_ai", "scratchpad", "tmp", "node_modules", ".claude", ".codex", ".agents"}
 MAX_OUTPUT_CHARS = 3000
 
 
