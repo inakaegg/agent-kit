@@ -29,6 +29,10 @@ run_local_hook() {
 # git config --local hooks.skipTextlint true。textlint未導入の環境では警告だけ
 # 出して通す（pre-pushのgitleaksと同じfail-open。検査対象はworking treeの
 # 内容で、部分stage時はstage内容と差が出得る）。
+#
+# 指摘があった場合、自動修正できる分はworking treeへ適用するが、stageも
+# commit続行もしない。機械の修正が過剰なことがあるため、人間が差分を確認して
+# stageし直す手順を必ず挟む（機械が直し、人が承認する）。
 run_textlint() {
   staged_md="$(git diff --cached --name-only --diff-filter=d -- '*.md')"
   [ -n "$staged_md" ] || return 0
@@ -48,15 +52,49 @@ run_textlint() {
     echo "pre-commit: textlint未導入のため日本語lintを省略します（agent-kit READMEのGit hooks節を参照）。" >&2
     return 0
   fi
-  if ! printf '%s\n' "$staged_md" | tr '\n' '\0' | xargs -0 textlint --no-color --config "$cfg"; then
-    {
-      echo ""
-      echo "pre-commit: textlintの指摘があります。修正してから再commitしてください。"
-      echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
-      echo "  - 意図的に検査しないリポジトリでは: git config --local hooks.skipTextlint true"
-    } >&2
-    exit 1
+  if printf '%s\n' "$staged_md" | tr '\n' '\0' | xargs -0 textlint --no-color --config "$cfg" >/dev/null 2>&1; then
+    return 0
   fi
+
+  # 未stageの変更が既にあるファイルは、無関係な変更との混在を避けるため
+  # 自動修正の対象にしない。
+  fix_targets=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    if git diff --quiet -- "$f" 2>/dev/null; then
+      fix_targets="${fix_targets}${f}
+"
+    fi
+  done <<TARGETS
+$staged_md
+TARGETS
+  fixed=""
+  if [ -n "$fix_targets" ]; then
+    printf '%s' "$fix_targets" | tr '\n' '\0' | xargs -0 textlint --no-color --fix --config "$cfg" >/dev/null 2>&1 || true
+    fixed="$(printf '%s' "$fix_targets" | tr '\n' '\0' | xargs -0 git diff --name-only -- 2>/dev/null)"
+  fi
+  remaining="$(printf '%s\n' "$staged_md" | tr '\n' '\0' | xargs -0 textlint --no-color --config "$cfg" 2>&1)" && remaining=""
+
+  {
+    if [ -n "$fixed" ] && [ -z "$remaining" ]; then
+      echo "pre-commit: textlintの指摘を自動修正しました。差分を確認してstageし、再commitしてください。"
+    elif [ -n "$fixed" ]; then
+      echo "pre-commit: textlintの指摘の一部を自動修正しました。差分の確認と、残りの指摘の修正が必要です。"
+    else
+      echo "pre-commit: textlintの指摘があります。修正してから再commitしてください。"
+    fi
+    if [ -n "$fixed" ]; then
+      echo "自動修正を適用したファイル（未stage。内容を確認してからstageしてください）:"
+      printf '%s\n' "$fixed" | sed 's/^/  - /'
+    fi
+    if [ -n "$remaining" ]; then
+      echo "残りの指摘:"
+      printf '%s\n' "$remaining"
+    fi
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+    echo "  - 意図的に検査しないリポジトリでは: git config --local hooks.skipTextlint true"
+  } >&2
+  exit 1
 }
 
 run_textlint

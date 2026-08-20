@@ -140,7 +140,9 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
   `.textlintrc.json` 等の設定があればそれを優先し、なければこのkit同梱の
   `.textlintrc.json`（文の長さ、冗長表現、漢字の連続など）と `prh.yaml`（用語辞書）で
   検査します。検査しないリポジトリでは `git config --local hooks.skipTextlint true` を
-  設定します。
+  設定します。指摘のうち自動修正できる分（用語辞書、数字表記など）はworking treeへ
+  適用しますが、そのままcommitには入れず一度止めます。機械の修正が過剰なことも
+  あるため、人間が差分を確認してstageし直してから再commitします。
 <!-- textlint-disable prh -->（悪い例の引用のため、次の1文だけ用語辞書の検査を除外）
   辞書には、レビューで実際に指摘された「読者に伝わらない語」（縮退→フォールバック等）を
   登録し、同型の指摘が2件以上出た語を追加して育てます。
