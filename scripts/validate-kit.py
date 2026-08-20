@@ -25,6 +25,7 @@ REQUIRED_FILES = [
     "git-hooks/pre-push",
     ".textlintrc.json",
     "prh.yaml",
+    "scripts/textlint-hook.py",
     "tests/test_public_bundle.py",
 ]
 

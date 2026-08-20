@@ -25,13 +25,13 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 3. **検証は自己申告ではなく証拠で** — 非自明な変更は、実装した本人とは別の文脈の
    レビュアーがgate制で検査する（`skills/independent-review/`）。実行していない
    コマンドを実行済みと報告しない、という規則が全体の土台にある。
-4. **検査は境界に置き、編集のたびには走らせない** — エージェントの編集1回ごとに
-   検査や注意喚起を挟む方式（エージェント側hookでの常時監査）は、コストが高いうえ、
-   繰り返される注意はすぐ効かなくなる。検査が走るのはcommit・push・公開という境界だけとする。
-   機械判定できる検査（絶対パス混入・秘密情報・日本語lint）はGit hookへ、
-   意味の検査（読みやすさ・整合性）は公開・提出前のレビューgate
-   （`skills/docs-maintenance/`）へ置く。エージェント固有のhook機構は、
-   合格を機械判定できる閉じたループの進行制御以外に使わない。
+4. **高コストな検査は境界に置き、編集のたびには走らせない** — 編集1回ごとに
+   LLMの監査や注意喚起を挟む方式は、コストが高いうえ、繰り返される注意はすぐ
+   効かなくなる。意味の検査（読みやすさ・整合性）は公開・提出前のレビューgate
+   （`skills/docs-maintenance/`）へ、機械判定できる検査（絶対パス混入・秘密情報・
+   日本語lint）はcommit・pushのGit hookへ置く。例外は決定論的で安価なlintで、
+   これだけは編集直後の即時フィードバック（後述のtextlint hook）にも使う。
+   指摘がなければ無音のため、繰り返しても注意が摩耗しないからである。
 
 ## 構成
 
@@ -71,6 +71,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── VERIFICATION.md
 ├── scripts/
 │   ├── agent-check.example.sh
+│   ├── textlint-hook.py     # Claude Code用: .md編集直後の即時lint
 │   └── validate-kit.py
 └── tests/
     └── test_public_bundle.py
@@ -159,6 +160,33 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
   pushを通します（`brew install gitleaks` で有効化）。
 - リポジトリ固有の `.git/hooks/` がある場合は検査後に委譲します。意図的に絶対パスを
   許可するリポジトリでは `git config --local hooks.allowLocalPaths true` を設定します。
+
+### 編集時の即時lint（Claude Code）
+
+Claude Codeでは、エージェントが `.md` を編集・作成した直後にtextlintを実行し、
+指摘をその場で修正させられます。`~/.claude/settings.json` へ次のhookを登録します。
+指摘がないときは何も出力しません。`_ai/` などエージェント専用の内部文書は対象外です。
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/agent-kit/scripts/textlint-hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codexには同等のhook機構がないため、Codex側はcommit時のpre-commitと
+`$docs-maintenance` の手順でカバーします。
 
 ### 個人環境ポリシー
 
