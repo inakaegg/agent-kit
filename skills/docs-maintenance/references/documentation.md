@@ -86,4 +86,4 @@ projectが別構成を定めている場合はそれを優先する。定めが�
 - 文書の一文を固定するより、必要な意味、link、公式名称、安全条件を検査する。
 - public docsへuser prompt全文を自動転載しない。要件を必要十分に要約し、個人・内部情報を除く。
 - 編集後は、触った文書に圧縮パスを1回かける（反復、コードから自明な記述、陳腐化した文を除く）。行数減だけを簡素化の根拠にしない。
-- 公開・提出する人間向けの重要文書は、docs-maintenance Skillの `assets/DOCS_REVIEW_PROMPT.md` を使い、fresh contextの読みやすさレビュー（round 2既定）で `VERDICT: LGTM` を得てから出す。
+- 公開・提出する人間向けの重要文書は、docs-maintenance Skillの `assets/DOCS_REVIEW_PROMPT.md` を使い、fresh contextの読みやすさレビュー（round 2既定）で `VERDICT: LGTM` を得てから出す。reviewerの資格条件も同ファイルが正本。
