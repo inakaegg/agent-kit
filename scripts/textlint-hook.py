@@ -88,7 +88,10 @@ def main() -> int:
     print(
         f"textlint: {path} に日本語文書lintの指摘があります。"
         "いま編集した文書なので、この場で修正してください"
-        "（自動修正可能な指摘は textlint --fix でも直せます）。\n" + output,
+        "（自動修正可能な指摘は textlint --fix でも直せます）。"
+        "規則が実態に合わない場合は、共有kit側の設定を編集せず、"
+        "対象リポジトリ直下の .textlintrc.json（無ければkit設定を複製して作成）で調整してください。\n"
+        + output,
         file=sys.stderr,
     )
     return 2

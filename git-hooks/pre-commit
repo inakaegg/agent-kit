@@ -92,6 +92,8 @@ TARGETS
       printf '%s\n' "$remaining"
     fi
     echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+    echo "  - 規則の調整は、共有kit側の設定ではなく、このリポジトリ直下の"
+    echo "    .textlintrc.json（無ければkit設定を複製して作成）で行う"
     echo "  - 意図的に検査しないリポジトリでは: git config --local hooks.skipTextlint true"
   } >&2
   exit 1
