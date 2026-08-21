@@ -2,7 +2,7 @@
 name: debug-loop
 description: >-
   Use when a bug's cause is not obvious or a first fix did not stick: regressions, flaky failures,
-  async or state issues, same-shape defect clusters. Japanese cues: 「原因不明のbug」「回帰」「flaky」「1回で直らない」.
+  async・state・distributed issues, same-shape defect clusters. Japanese cues: 「原因不明のbug」「回帰」「flaky」「分散」「1回で直らない」.
 ---
 
 # Debug Loop

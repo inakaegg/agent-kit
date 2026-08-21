@@ -1,8 +1,8 @@
 ---
 name: semantic-generation
 description: >-
-  Use before design docs / survey reports / cause isolation / countermeasure plans / naming decisions /
-  reasoning-order summaries. Naming includes state・condition・type・method names. First build a
+  Use before design docs / design from requirements / survey reports / cause isolation / countermeasures /
+  naming decisions / reasoning-order summaries. Naming includes state・condition・type・method names. First build a
   correspondence table as an independent deliverable; fix referents and roles before words. Not for:
   quoting the user's text / mechanical edits / reusing existing names / boilerplate / chit-chat /
   short texts of established terms. Japanese cues: 「対応表を先に」「命名の前に」「設計資料の下準備」.

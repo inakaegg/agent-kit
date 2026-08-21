@@ -23,6 +23,7 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── README.md
+├── README.ja.md
 ├── .textlintrc.json         # Japanese docs lint rules (used by pre-commit)
 ├── prh.yaml                 # terminology dictionary (grown from review findings)
 ├── docs/
@@ -112,7 +113,7 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 
 - `pre-commit` rejects commits whose staged diff adds environment-dependent absolute paths (under the home directory or on external volumes).
 - `pre-commit` then checks staged `.md` files with [textlint](https://textlint.org/), a Japanese technical-writing linter. It is on by default in every repository. A config at the repository root (`.textlintrc.json` etc.) takes precedence. Otherwise the kit's bundled `.textlintrc.json` (sentence length, redundant phrasing, kanji runs) and `prh.yaml` (terminology dictionary) apply. To opt a repository out, set `git config --local hooks.skipTextlint true`. Auto-fixable findings (terminology, number style) are applied to the working tree, but the commit still stops once. Machine fixes can overshoot, so a human reviews the diff, re-stages, and commits again.
-<!-- textlint-disable prh -->（悪い例の引用のため、次の1文だけ用語辞書の検査を除外 / prh is disabled for the next sentence, which quotes a bad example）
+<!-- textlint-disable prh -->（悪い例の引用のため、この区間だけ用語辞書の検査を除外 / prh is disabled for this quoted-example passage）
   The dictionary holds words reviewers actually flagged as hard on readers (e.g. 縮退 → フォールバック). Any word flagged in two or more reviews gets added, so the dictionary grows.
 <!-- textlint-enable prh -->
   Where textlint is not installed, the hook only warns and lets the commit pass. Only rules that hold across all projects belong in the kit's bundled config and dictionary. To relax something for one project, use that repository's own root config (the precedence above). Enabling is a one-time step:

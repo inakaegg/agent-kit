@@ -1,5 +1,7 @@
 # agent-kit — AIコーディングエージェントの運用キット
 
+🇬🇧 English: [README.md](README.md)
+
 CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、タスク別の手順書（Skill）、
 テンプレート、検査スクリプトのセットです。汎用の雛形ではなく、個人開発の実運用で
 使っている構成をそのまま固めたもの（いわゆるopinionated）です。
@@ -40,6 +42,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── README.md
+├── README.ja.md
 ├── .textlintrc.json         # 日本語文書lintの規則（pre-commitが参照）
 ├── prh.yaml                 # 用語辞書（レビュー指摘から育てる）
 ├── docs/
