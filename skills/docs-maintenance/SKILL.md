@@ -1,6 +1,9 @@
 ---
 name: docs-maintenance
-description: Use when README、SPEC、ROADMAP、ADR、公開docs、内部_aiの新規作成、更新、分割、統合、改名、削除、または実装との同期が必要なとき。
+description: >-
+  Use when README / SPEC / ROADMAP / ADR / public docs / internal _ai docs need creating or updating.
+  Also for splitting / merging / renaming / deleting them, and for syncing docs with the implementation.
+  Japanese cues: 「README更新」「docs整理」「仕様と実装の同期」.
 ---
 
 # Documentation Maintenance

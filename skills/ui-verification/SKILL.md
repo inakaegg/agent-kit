@@ -1,6 +1,8 @@
 ---
 name: ui-verification
-description: Use when Web・nativeのlayout、component、style、interaction、navigation、loading/error/empty stateなど、見えるUIを変更または監査するとき。
+description: >-
+  Use when changing or auditing visible UI in web・native apps: layout / components / style /
+  interaction / navigation / loading・error・empty states. Japanese cues: 「UI確認」「実画面で検証」「画面崩れ」.
 ---
 
 # UI Verification

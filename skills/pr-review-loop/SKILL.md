@@ -1,6 +1,8 @@
 ---
 name: pr-review-loop
-description: Use when 明示許可されたPRで、latest headのreviewer・bot finding、CI、修正、再検証、再reviewを追跡して収束させるとき。
+description: >-
+  Use on an explicitly approved PR to drive convergence on the latest head: reviewer and bot findings /
+  CI / fixes / re-verification / re-review. Japanese cues: 「PRレビュー対応」「botの指摘を処理」「CIを通して再review」.
 ---
 
 # PR Review Loop

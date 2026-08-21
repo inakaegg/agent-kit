@@ -1,6 +1,12 @@
 ---
 name: pair
-description: Use when 2つのコーディングエージェントチャットで並行体制(実装役+監視役)を組むとき。ユーザーが片方のチャットにだけ「/pair <タスク>」と打てば、役割判定・相手セッションの発見・相手への役割指示の送付まで自動で行う。「並行体制で」「2チャットで分担」「pairで」等が合図。相手チャットは空でよく、ユーザーが両方へ指示を書き続ける必要はない。相手はClaudeチャットのほかCodex CLIチャットでもよい(Codexは実装役のみ。通信はSendMessageの代わりにファイル+rollout監査のtransportへ切り替える)。単独作業、および1チャット内でのサブエージェント委任(codexプラグインのtask委任等)には使わない。
+description: >-
+  Use to run two coding-agent chats in parallel (implementer + watcher). The user types 「/pair <task>」
+  in one chat only; role detection, peer-session discovery, and sending the peer its role brief are
+  automatic. Japanese cues: 「並行体制で」「2チャットで分担」「pairで」. The peer chat may start empty;
+  the user does not have to keep writing to both. The peer can be a Claude chat or a Codex CLI chat
+  (Codex is implementer-only; transport switches to file inbox/outbox + rollout audit). Not for solo
+  work or for in-chat subagent delegation (e.g. codex-plugin task delegation).
 ---
 
 # Pair — 片側1回の指示で始める並行体制

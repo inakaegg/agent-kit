@@ -1,6 +1,8 @@
 ---
 name: evaluation-loop
-description: Use when heuristic、ranking、OCR・ASR・翻訳・生成品質、または複数実装案を同一dataで比較し、採否を実測で決めるとき。
+description: >-
+  Use when adoption is decided by measurement: heuristics / ranking / OCR・ASR・translation・generation
+  quality / rival implementations compared on the same data. Japanese cues: 「同一データで比較」「実測で採否」「品質を評価」.
 ---
 
 # Evaluation Loop

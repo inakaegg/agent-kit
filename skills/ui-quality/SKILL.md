@@ -1,6 +1,10 @@
 ---
 name: ui-quality
-description: Webまたはネイティブアプリの見えるUIを設計、実装、実画面確認、監査、再修正まで一貫して行う。新規画面・コンポーネント、レスポンシブ／ウインドウレイアウト、テーマ、フォーム、ダイアログ、ナビゲーション、UIの見た目・操作性・一貫性の改善や不具合修正で使用する。
+description: >-
+  End-to-end visible-UI work for web and native apps: design → implementation → real-screen
+  verification → audit → re-fix. Use for new screens・components / responsive・window layouts /
+  themes / forms / dialogs / navigation, and for fixing UI looks・usability・consistency.
+  Japanese cues: 「UIを作って」「画面を改善」「見た目を直して」.
 ---
 
 # UI Quality

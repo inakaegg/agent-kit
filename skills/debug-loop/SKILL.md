@@ -1,6 +1,8 @@
 ---
 name: debug-loop
-description: Use when 原因が明白でないbug、回帰、flaky failure、非同期・状態・分散問題、同型の複数不具合、または1回目の修正で直らない問題。
+description: >-
+  Use when a bug's cause is not obvious or a first fix did not stick: regressions, flaky failures,
+  async or state issues, same-shape defect clusters. Japanese cues: 「原因不明のbug」「回帰」「flaky」「1回で直らない」.
 ---
 
 # Debug Loop
