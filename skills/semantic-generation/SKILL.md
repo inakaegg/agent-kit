@@ -1,10 +1,11 @@
 ---
 name: semantic-generation
 description: >-
-  設計資料、要求からの設計、調査報告、原因切り分け案、対策案、命名、状態名・条件名・
-  型名・メソッド名の決定、または推論順序の要約を行う前に、対応表を独立成果物として
-  先に作り、語より先に指示対象と役割を固定する。ユーザー原文の引用、単純な機械編集、
-  既存名の再利用、定型出力、雑談、確立した用語だけで書ける短文には使わない。
+  Use before design docs / design from requirements / survey reports / cause isolation / countermeasures /
+  naming decisions / reasoning-order summaries. Naming includes state・condition・type・method names. First build a
+  correspondence table as an independent deliverable; fix referents and roles before words. Not for:
+  quoting the user's text / mechanical edits / reusing existing names / boilerplate / chit-chat /
+  short texts of established terms. Japanese cues: 「対応表を先に」「命名の前に」「設計資料の下準備」.
 ---
 
 # Semantic Generation

@@ -26,7 +26,7 @@
 - untracked fileを無断削除しない。
 - pre-commit Hookをskipしない。
 - 未pushの直前commitと同じ目的の修正は `git commit --amend` で統合してよい。
-- commit messageはrepository規則を優先する。規則がなければ `test:`、`fix:`、`feat:`、`refactor:`、`perf:`、`docs:` 等のprefixと、簡潔な日本語または英語を使う。
+- commit messageはrepository規則（明文か、履歴の支配的な形式）を優先する。規則がなければ、件名は `test:` `fix:` `feat:` `refactor:` `perf:` `docs:` 等のprefix付きの簡潔な**英語**とし、補足が必要な場合だけ本文へ日本語で書く。件名は72字以内に収める（一覧表示で切り詰められるため）。
 - 検査失敗、未解決の仕様判断、意図確認が必要な削除・大改変がある場合はcommitしない。
 
 ## 3. push・PR

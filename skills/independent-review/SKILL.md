@@ -1,6 +1,9 @@
 ---
 name: independent-review
-description: Use when PR前の非自明な変更、user-visible behavior、public API、永続化、並行・非同期、security、billing、deployment、またはmigrationをfresh contextでreviewするとき。
+description: >-
+  Use for fresh-context review of non-trivial changes before a PR. Targets: user-visible behavior /
+  public API / persistence / concurrency・async / security / billing / deployment / migration.
+  Japanese cues: 「独立レビュー」「別contextでレビュー」「gateレビュー」.
 ---
 
 # Independent Review

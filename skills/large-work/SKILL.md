@@ -1,6 +1,9 @@
 ---
 name: large-work
-description: Use when 30分以上、100件超、大量token・外部料金・GPU・storage、大規模migration・annotation・網羅調査など、段階的pilotと停止条件が必要な作業。
+description: >-
+  Use for work that needs a staged pilot and stop conditions. Signals: over 30 minutes / over 100 items /
+  heavy token・external-fee・GPU・storage use / large migrations・annotation・exhaustive surveys.
+  Japanese cues: 「大量」「網羅的に」「全件処理」.
 ---
 
 # Large Work

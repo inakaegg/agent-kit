@@ -1,47 +1,31 @@
-# agent-kit — AIコーディングエージェントの運用キット
+# agent-kit — an operations kit for AI coding agents
 
-CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、タスク別の手順書（Skill）、
-テンプレート、検査スクリプトのセットです。汎用の雛形ではなく、個人開発の実運用で
-使っている構成をそのまま固めたもの（いわゆるopinionated）です。
+🇯🇵 日本語ドキュメント: [README.ja.md](README.ja.md)
 
-エージェントが常時読み込むのは160行の `AGENTS.md` だけに絞り、詳しい手順はSkillへ、
-タスクの合格条件・作業中の仮説・恒久仕様はそれぞれ別のファイル（`templates/` 参照）へ、
-機械的に判定できる規則は検査スクリプトへ分離しています。権限境界（push・公開・課金は
-明示許可制）と停止条件を、CodexとClaude Codeの区別なく全プロジェクトで揃えるのが役割です。
+A set of working rules (`AGENTS.md`), task-specific playbooks (skills), templates, and verification scripts shared by Codex and Claude Code. This is not a generic boilerplate: it is the setup I actually run for solo development, frozen as is (opinionated by design).
 
-## 設計の考え方
+Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in skills. Task acceptance criteria, working hypotheses, and durable specs live in separate files (see `templates/`). Machine-checkable rules live in verification scripts. The kit's job is to keep permission boundaries and stop conditions identical across Codex and Claude Code on every project. Push, publication, and billing always require explicit human approval.
 
-1. **規則は文書ではなく機械で強制する** — 規約文書（`AGENTS.md`）に書くだけでは、
-   エージェントは従ったり従わなかったりする。そのため規約文書は入口に留め、破ると
-   失敗する検査（`scripts/validate-kit.py`、`git-hooks/` のpre-commit・pre-push、テスト）を本体とする。
-   文章での注意が増えてきた規則は、lint・test・Hook・CIへ移す
-   （置き場所の判定手順は `docs/instruction-placement.md`）。
-2. **完全自動ループは、合格を機械判定できる閉じたタスクに限る** — 一括migrationや
-   lint掃討のように「done」をテストや数値で判定できる作業以外では、エージェントを
-   無人で回さない。ソフトウェア開発の大半は、作っている途中で不明確な点が現れ、
-   質問と判断を通じて仕様が固まっていく。だから既定は、自走距離を伸ばしつつ本当の
-   判断点でだけ人間へ戻す**監督付き並行体制**とする
-   （実装役＋監視役の2セッション、`skills/pair/`）。
-3. **検証は自己申告ではなく証拠で** — 非自明な変更は、実装した本人とは別の文脈の
-   レビュアーがgate制で検査する（`skills/independent-review/`）。実行していない
-   コマンドを実行済みと報告しない、という規則が全体の土台にある。
-4. **高コストな検査は境界に置き、編集のたびには走らせない** — 編集1回ごとに
-   LLMの監査や注意喚起を挟む方式は、コストが高いうえ、繰り返される注意はすぐ
-   効かなくなる。意味の検査（読みやすさ・整合性）は公開・提出前のレビューgate
-   （`skills/docs-maintenance/`）へ、機械判定できる検査（絶対パス混入・秘密情報・
-   日本語lint）はcommit・pushのGit hookへ置く。例外は決定論的で安価なlintで、
-   これだけは編集直後の即時フィードバック（後述のtextlint hook）にも使う。
-   指摘がなければ無音のため、繰り返しても注意が摩耗しないからである。
+## Design principles
 
-## 構成
+1. **Enforce rules with machines, not documents**. Rules that exist only in a policy document get followed inconsistently. So the policy document stays a thin entry point. The real enforcement is checks that fail when a rule is broken: `scripts/validate-kit.py`, the pre-commit and pre-push hooks in `git-hooks/`, and tests. When written reminders about the same rule keep accumulating, the rule moves into lint / tests / hooks / CI. The placement procedure is `docs/instruction-placement.md`.
+
+2. **Fully autonomous loops are only for closed tasks with machine-checkable success**. Except for work whose "done" can be judged by tests or numbers — bulk migrations, lint sweeps — agents are not run unattended. Most software development surfaces unclear points mid-build, and the spec settles through questions and decisions. So the default is a supervised pair setup: implementer plus watcher across two sessions (`skills/pair/`). Extend the autonomous stretch, but return to a human exactly at the real decision points.
+
+3. **Verification means evidence, not self-report**. Non-trivial changes are reviewed through gates by a reviewer whose context is separate from the implementer's (`skills/independent-review/`). The foundation under everything else is one rule: never report a command as executed when it was not.
+
+4. **Put expensive checks at boundaries, not on every edit**. Running an LLM audit or a warning banner on every single edit is costly, and repeated warnings quickly lose their force. Semantic checks (readability, consistency) belong to the pre-publication review gate (`skills/docs-maintenance/`). Machine-checkable ones (absolute-path leaks, secrets, Japanese docs lint) belong to the commit and push Git hooks. The one exception is deterministic, cheap lint, which also gives immediate feedback right after an edit (the textlint hook below). It is silent when there is nothing to report, so repetition does not wear it out.
+
+## Layout
 
 ```text
 .
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── README.md
-├── .textlintrc.json         # 日本語文書lintの規則（pre-commitが参照）
-├── prh.yaml                 # 用語辞書（レビュー指摘から育てる）
+├── README.ja.md
+├── .textlintrc.json         # Japanese docs lint rules (used by pre-commit)
+├── prh.yaml                 # terminology dictionary (grown from review findings)
 ├── docs/
 │   ├── instruction-placement.md
 │   ├── skill-authoring.md
@@ -49,9 +33,9 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │       ├── agent-collaboration.md
 │       └── git-and-remote.md
 ├── git-hooks/
-│   ├── pre-commit           # 環境依存の絶対パス混入をcommit時に拒否
-│   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
-├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
+│   ├── pre-commit           # rejects environment-dependent absolute paths at commit time
+│   └── pre-push             # scans for secrets with gitleaks before push (full history on first push)
+├── skills/                  # each skill has SKILL.md and agents/openai.yaml
 │   ├── ci-fix/
 │   ├── debug-loop/
 │   ├── dep-upgrade-safe/
@@ -59,10 +43,10 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   ├── evaluation-loop/
 │   ├── independent-review/  # + assets/REVIEW_PROMPT.md
 │   ├── large-work/
-│   ├── pair/                # + assets/役割brief 3種 + references（transport-codex、設計ノート）
+│   ├── pair/                # + assets: 3 role briefs; references (transport-codex, design notes)
 │   ├── pr-review-loop/
 │   ├── semantic-generation/ # + references/referent-before-label.md
-│   ├── ui-quality/          # + references（web、native、audit-rubric）
+│   ├── ui-quality/          # + references (web, native, audit-rubric)
 │   └── ui-verification/
 ├── templates/
 │   ├── ACTIVE_PLAN.md
@@ -71,24 +55,21 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── VERIFICATION.md
 ├── scripts/
 │   ├── agent-check.example.sh
-│   ├── textlint-hook.py     # Claude Code用: .md編集直後の即時lint
+│   ├── textlint-hook.py     # Claude Code: instant lint right after a .md edit
 │   └── validate-kit.py
 └── tests/
     └── test_public_bundle.py
 ```
 
-各Skillは単独で配置しても参照が壊れないよう、必要なreferenceやassetを
-同じSkill directory内に保持します。
+Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.
 
-## 導入
+## Installation
 
-既存ファイルがある場合は上書きせず、内容とsymlink先を確認してから切り替えてください。
-以下の `/absolute/path/to/common-agents` はclone先の絶対pathへ置き換えます。
+If some of these files already exist on your machine, do not overwrite them; check their contents and symlink targets before switching. Replace `/absolute/path/to/common-agents` with the absolute path of your clone.
 
 ### Codex
 
-Codexはグローバル指示を `~/.codex/AGENTS.md`、ユーザーSkillを
-`~/.agents/skills/` から読みます。
+Codex reads global instructions from `~/.codex/AGENTS.md` and user skills from `~/.agents/skills/`.
 
 ```bash
 agent_kit_dir="/absolute/path/to/common-agents"
@@ -103,13 +84,11 @@ for skill_dir in "$agent_kit_dir"/skills/*; do
 done
 ```
 
-`CODEX_HOME`を設定している場合は、`~/.codex` の代わりにそのdirectoryを使います。
+If you set `CODEX_HOME`, use that directory instead of `~/.codex`.
 
 ### Claude Code
 
-Claude Codeはユーザー指示を `~/.claude/CLAUDE.md`、ユーザーSkillを
-`~/.claude/skills/` から読みます。`CLAUDE.md` は隣の `AGENTS.md` をimportする
-薄いadapterです。
+Claude Code reads user instructions from `~/.claude/CLAUDE.md` and user skills from `~/.claude/skills/`. `CLAUDE.md` is a thin adapter that imports the `AGENTS.md` next to it.
 
 ```bash
 agent_kit_dir="/absolute/path/to/common-agents"
@@ -126,46 +105,30 @@ done
 
 ### Git hooks
 
-このhookはエージェント専用の機能ではなく、Gitの標準機構です。エージェントにも人間にも
-同じ規約を強制する最終防衛線としてキットに含めています。
-`git-hooks/` を全リポジトリ共通のhook置き場として `core.hooksPath` に設定します。
+These hooks are standard Git machinery, not an agent-only feature. They are in the kit as the last line of defense that holds agents and humans to the same rules. Set `git-hooks/` as the shared hooks directory via `core.hooksPath`:
 
 ```bash
 git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
 
-- `pre-commit` は、環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
-  staged diffの追加行へ混入したcommitを拒否します。
-- `pre-commit` は続けて、staged対象の `.md` を [textlint](https://textlint.org/)
-  （日本語の技術文書lint）で検査します。全リポジトリで既定有効です。リポジトリ直下に
-  `.textlintrc.json` 等の設定があればそれを優先し、なければこのkit同梱の
-  `.textlintrc.json`（文の長さ、冗長表現、漢字の連続など）と `prh.yaml`（用語辞書）で
-  検査します。検査しないリポジトリでは `git config --local hooks.skipTextlint true` を
-  設定します。指摘のうち自動修正できる分（用語辞書、数字表記など）はworking treeへ
-  適用しますが、そのままcommitには入れず一度止めます。機械の修正が過剰なことも
-  あるため、人間が差分を確認してstageし直してから再commitします。
-<!-- textlint-disable prh -->（悪い例の引用のため、次の1文だけ用語辞書の検査を除外）
-  辞書には、レビューで実際に指摘された「読者に伝わらない語」（縮退→フォールバック等）を
-  登録し、同型の指摘が2件以上出た語を追加して育てます。
+- `pre-commit` rejects commits whose staged diff adds environment-dependent absolute paths (under the home directory or on external volumes).
+- `pre-commit` then checks staged `.md` files with [textlint](https://textlint.org/), a Japanese technical-writing linter. It is on by default in every repository. A config at the repository root (`.textlintrc.json` etc.) takes precedence. Otherwise the kit's bundled `.textlintrc.json` (sentence length, redundant phrasing, kanji runs) and `prh.yaml` (terminology dictionary) apply. To opt a repository out, set `git config --local hooks.skipTextlint true`. Auto-fixable findings (terminology, number style) are applied to the working tree, but the commit still stops once. Machine fixes can overshoot, so a human reviews the diff, re-stages, and commits again.
+<!-- textlint-disable prh -->（悪い例の引用のため、この区間だけ用語辞書の検査を除外 / prh is disabled for this quoted-example passage）
+  The dictionary holds words reviewers actually flagged as hard on readers (e.g. 縮退 → フォールバック). Any word flagged in two or more reviews gets added, so the dictionary grows.
 <!-- textlint-enable prh -->
-  textlint未導入の環境では警告だけ出して通します。有効化は次の1回だけです。
+  Where textlint is not installed, the hook only warns and lets the commit pass. Only rules that hold across all projects belong in the kit's bundled config and dictionary. To relax something for one project, use that repository's own root config (the precedence above). Enabling is a one-time step:
 
   ```bash
   npm install -g textlint textlint-rule-preset-ja-technical-writing \
     textlint-rule-prh textlint-filter-rule-comments
   ```
 
-- `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
-  秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
-  pushを通します（`brew install gitleaks` で有効化）。
-- リポジトリ固有の `.git/hooks/` がある場合は検査後に委譲します。意図的に絶対パスを
-  許可するリポジトリでは `git config --local hooks.allowLocalPaths true` を設定します。
+- `pre-push` scans the pushed commit range with gitleaks (all reachable history on the first push) and rejects the push when it finds likely secrets. Without gitleaks installed it only warns and lets the push through (`brew install gitleaks` to enable).
+- When a repository has its own `.git/hooks/`, the shared hooks delegate to it after their own checks. Repositories that intentionally allow absolute paths set `git config --local hooks.allowLocalPaths true`.
 
-### 編集時の即時lint（Claude Code）
+### Instant lint on edit (Claude Code)
 
-Claude Codeでは、エージェントが `.md` を編集・作成した直後にtextlintを実行し、
-指摘をその場で修正させられます。`~/.claude/settings.json` へ次のhookを登録します。
-指摘がないときは何も出力しません。`_ai/` などエージェント専用の内部文書は対象外です。
+In Claude Code, textlint can run right after an agent edits or creates a `.md` file, so the agent fixes findings on the spot. Register the hook below in `~/.claude/settings.json`. It prints nothing when there are no findings. Agent-internal documents such as `_ai/` are excluded.
 
 ```json
 {
@@ -185,55 +148,47 @@ Claude Codeでは、エージェントが `.md` を編集・作成した直後�
 }
 ```
 
-この登録は、textlintの導入（前節の `npm install`）と同じく、利用者が各自で行う
-手作業です。自動で実行されるコマンドの登録は、人間が自分の設定へ書くべきもの
-なので、エージェントに代行させません（Claude Code側も、エージェントによる
-この設定の書き込みを自動では承認しません）。
+This registration is a manual step each user performs, like the `npm install` above. Commands that run automatically belong in settings a human writes for themselves, so this is not delegated to agents. Claude Code also does not auto-approve an agent writing this setting.
 
-Codexには同等のhook機構がないため、Codex側はcommit時のpre-commitと
-`$docs-maintenance` の手順でカバーします。
+Codex has no equivalent hook mechanism; the Codex side is covered by pre-commit and the `$docs-maintenance` procedure.
 
-### 個人環境ポリシー
+### Personal environment policy
 
-端末固有のmodel保存先、timezone、local log、path検査は公開bundleへ含めません。
-必要な利用者だけ `~/.codex/local-policies/local-environment.md` を作成します。
-共通 `AGENTS.md` と `$large-work` は、このファイルが存在する場合だけ読みます。
+Machine-specific model locations, timezones, local logs, and path checks are not part of the public bundle. Users who need them create `~/.codex/local-policies/local-environment.md`. The shared `AGENTS.md` and `$large-work` read this file only when it exists.
 
-## Projectへの適用
+## Applying to a project
 
-1. `templates/PROJECT_AGENTS.md` を基に、project固有の短い `AGENTS.md` を作る。
-2. 実在するbuild・lint・test commandを `templates/VERIFICATION.md` の形で記録する。
-3. taskの合格条件は `templates/TASK.md`、作業中の仮説と進捗は
-   `templates/ACTIVE_PLAN.md` から作る。
-4. 共通規則へ追記する前に `docs/instruction-placement.md` で置き場所を判定する。
+1. Create a short project-specific `AGENTS.md` from `templates/PROJECT_AGENTS.md`.
+2. Record the project's real build, lint, and test commands in the form of `templates/VERIFICATION.md`.
+3. Write task acceptance criteria from `templates/TASK.md`, and working hypotheses and progress from `templates/ACTIVE_PLAN.md`.
+4. Before adding anything to the shared rules, check the right location with `docs/instruction-placement.md`.
 
-## 検証
+## Verification
 
 ```bash
 python3 scripts/validate-kit.py
 python3 -m unittest discover -s tests -v
 ```
 
-検証は、必須ファイル、Skill frontmatter、参照先、個人・端末固有情報、
-`AGENTS.md` の大きさ、Claude adapterを確認します。
+The checks cover required files / skill frontmatter / reference targets / personal or machine-specific info / `AGENTS.md` size / the Claude adapter.
 
-## 対応する公式仕様
+## Matching official docs
 
 - [Codex: Custom instructions with AGENTS.md](https://developers.openai.com/codex/agent-configuration/agents-md)
 - [Codex: Build skills](https://developers.openai.com/codex/build-skills)
 - [Claude Code: How Claude remembers your project](https://code.claude.com/docs/en/memory)
 - [Claude Code: Extend Claude with skills](https://code.claude.com/docs/en/slash-commands)
 
-## 意図的に共通化しないもの
+## Deliberately not shared
 
-- 特定のpackage manager、framework、coding style
-- すべてのbugやfeatureに対するIssue作成
-- 特定のreview bot、workflow、merge方式
-- 元のユーザープロンプト全文の公開
-- 個人PCの絶対path、cache、credential、local policy
+- A specific package manager, framework, or coding style
+- Creating an issue for every bug or feature
+- A specific review bot, workflow, or merge policy
+- Publishing the full original user prompts
+- Personal machines' absolute paths, caches, credentials, and local policies
 
-これらはprojectの `AGENTS.md`、lint・CI、個人設定、非公開policyへ置きます。
+These live in a project's `AGENTS.md`, lint and CI, personal settings, and private policies.
 
 ## License
 
-MIT License（`LICENSE` を参照）。
+MIT License (see `LICENSE`).
