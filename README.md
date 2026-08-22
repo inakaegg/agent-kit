@@ -56,10 +56,13 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 │   └── VERIFICATION.md
 ├── scripts/
 │   ├── agent-check.example.sh
+│   ├── agent-check.sh       # the kit's own checks (validate-kit + tests), run by pre-push and CI
 │   ├── textlint-hook.py     # Claude Code: instant lint right after a .md edit
 │   └── validate-kit.py
 └── tests/
-    └── test_public_bundle.py
+    ├── test_pre_push_hook.py
+    ├── test_public_bundle.py
+    └── test_textlint_hook.py
 ```
 
 Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.

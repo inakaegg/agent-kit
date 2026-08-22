@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # 公開bundle＝git管理下（index）のファイル。.gitignoreと未追跡ファイルはgitの判断に従う。
 # gitが使えない環境（tarball展開など）だけ、内部ディレクトリを除いた全走査へフォールバックする。
-FALLBACK_IGNORED_DIR_NAMES = {"_ai", ".worktrees", ".git", "node_modules", "scratchpad"}
+FALLBACK_IGNORED_DIR_NAMES = {"_ai", ".worktrees", ".git", "node_modules", "scratchpad", "__pycache__", ".venv"}
 
 
 def _fallback_bundle_files(root: Path) -> list[Path]:

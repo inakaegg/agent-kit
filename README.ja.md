@@ -75,10 +75,13 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── VERIFICATION.md
 ├── scripts/
 │   ├── agent-check.example.sh
+│   ├── agent-check.sh       # kit自身の検査（validate-kit＋tests）。pre-pushとCIが実行
 │   ├── textlint-hook.py     # Claude Code用: .md編集直後の即時lint
 │   └── validate-kit.py
 └── tests/
-    └── test_public_bundle.py
+    ├── test_pre_push_hook.py
+    ├── test_public_bundle.py
+    └── test_textlint_hook.py
 ```
 
 各Skillは単独で配置しても参照が壊れないよう、必要なreferenceやassetを

@@ -18,7 +18,7 @@ input="$(cat)"
 # （共通AGENTS.md §5）。既定offなのは、このhookがcore.hooksPathで全リポジトリに効くため、
 # cloneした他者のリポジトリに含まれるスクリプトをpushだけで実行させないため。
 run_agent_check() {
-  [ "$(git config --type=bool --default=false hooks.runAgentCheck)" = "true" ] || return 0
+  [ "$(git config --local --type=bool --default=false hooks.runAgentCheck 2>/dev/null)" = "true" ] || return 0
   [ -x scripts/agent-check.sh ] || return 0
   echo "pre-push: $(pwd)/scripts/agent-check.sh fast を実行します（hooks.runAgentCheck=true）" >&2
   if ! scripts/agent-check.sh fast; then
