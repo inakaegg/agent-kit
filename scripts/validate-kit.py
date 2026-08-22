@@ -42,6 +42,7 @@ EXPECTED_SKILLS = {
     "ci-fix",
     "dep-upgrade-safe",
     "ui-quality",
+    "architecture-diagram",
 }
 
 

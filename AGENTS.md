@@ -62,11 +62,10 @@
 - テスト、型、lint、security check、Hook、CIを無効化・弱体化・skipして通さない。`--no-verify`を使わない。
 - 誤った動作を受け入れさせるためにテストを変更しない。新しいテスト自身を期待値の正しさの唯一の根拠にしない。
 - 入出力を文字列・データとして定義できる機能は、完了報告の前に、CLI等の実行可能経路で代表入力セットを実際に流して出力を確認する。代表入力は正常系だけでなく、境界、要素の組合せ（修飾・活用・区切りなど）、言語・形式のバリエーションを含めて設計する。単体テストの成功やGUIの目視だけで完了扱いせず、確認した代表例と出力を完了報告に含め、可能なら自動テストへ固定する。
-- 作業中に新しい非自明なロジック・機構を設計して問題を解決し、それが定着したら、ユーザー向けの平易な説明文書を別途作る。何が問題で、どういう考え方で解き、どこに限界が残るかを、具体例つきで技術者以外にも分かる言葉で書く。仕様書・TASKの技術記述やチャット報告で代替しない。
+- 作業中に新しい非自明なロジック・機構を設計して問題を解決し、それが定着したら、ユーザー向けの平易な説明文書を別途作る。何が問題で、どういう考え方で解き、どこに限界が残るかを、具体例つきで技術者以外にも分かる言葉で書く。仕様書・TASKの技術記述やチャット報告で代替しない。READMEと設計文書には構成と流れを図で示す。流れ・状態遷移・シーケンス・ERはMermaid、クラウド構成図は公式アイコンのDiagram as Code（`$architecture-diagram`）とし、生成スクリプトごとリポジトリへ置いて画像を手で編集しない。
 - 外部サービスのfixtureは、公式docs・公式schema・匿名化した実観測outputを優先し、出典、version、取得日、実例か合成かを記録する。通常の回帰テストはnetworkやAPI keyなしで実行できるようにする。
 - 性能改善を主張する場合は、同じ条件のBefore/After、環境、測定方法を残す。測定不能なら、まず測定経路を追加する。
 - UI変更は、対象の実画面を重要なsize・state・themeでrenderし、スクリーンショットまたは操作結果を直接確認する。Web UIでは共有browserの有無だけで打ち切らず、project付属、local/global Playwright、installed browser等の安全な実行経路を確認する。Playwrightと対応browserが利用可能なら、変更した主要interactionを開始から結果まで自動操作し、画面を直接確認することをMUSTとする。静止画像生成、DOM寸法、build/testだけで代替せず、試した経路と失敗証跡なしに `VISUAL_QA_UNVERIFIED` としない。
-- READMEと設計文書には、構成と流れを図で示す。処理の流れ・状態遷移・シーケンス・ERはMermaidを既定とし、クラウド構成図は公式アイコンを使ったDiagram as Code（mingrammer/diagrams等）で生成した画像を、生成スクリプトと一緒にリポジトリへ置く。生成した画像を手で編集しない。
 - 音声、動画、OCR、ASR、生成AI等の品質は、test成功だけで製品価値を断定せず、固定fixture、客観指標、代表的な実出力を併用する。
 - 機能実装の際は、可能な限り同じ機能をCLIとしても実装する（MUST）。実装順もCLIを先とし、UI・API層は後からCLIと同じ処理経路の上へ重ねる。CLI化できない・すべきでない場合は、その理由を完了報告に含める。この規則の目的は、新機能をUIに載せる前に、人間が手元で動かして挙動を確かめられるようにすることである（確認が早いほどフィードバックが速い。UIを経由しない経路はテスト容易性にも効く）。対象は利用者へ届ける機能であり、個人環境のキーバインドや開発補助のような便宜は対象外。何が「利用者へ届ける機能」かはプロジェクトごとに判定する（例: エディタから使われるライブラリなら、エディタ連携の入口はそれ自体が利用者へ届く公開APIであり対象。一般のアプリなら、エディタ連携は開発の便宜であり対象外）。挙動ごとにサブコマンドを発行する規則ではない。CLIの入口をまとめる文書（`CLI.md` 等）は、貼ればそのまま動くコマンドを列挙した表だけで構成する。注釈、仕様の説明、設計の経緯、実行結果の例を書かない。置き換える値は冒頭へ短い表で示し、仕様は各componentの正本文書へ委ねる。
 - 既存commentは設計意図の手掛かりとして扱い、誤りでない限り無断削除しない。新しいcommentはcodeが既に示すWHATではなく、非自明なWHY・制約・不変条件を簡潔に説明する。
@@ -118,7 +117,7 @@
 - 見えるUI変更の検証：`$ui-verification`。設計・実装込みの一貫UI作業：`$ui-quality`
 - 各gateの別context review：`$independent-review`
 - PR bot・CI・再reviewの反復：`$pr-review-loop`。CI失敗の修復：`$ci-fix`、特定パッケージの更新：`$dep-upgrade-safe`
-- README・SPEC・ROADMAP・docs再編：`$docs-maintenance`。設計資料・命名の前の対応表作成：`$semantic-generation`
+- README・SPEC・ROADMAP・docs再編：`$docs-maintenance`。構成図・経路図：`$architecture-diagram`。設計資料・命名の前の対応表作成：`$semantic-generation`
 - 非自明なtaskの契約・active planは `~/.codex/agent-kit/templates/TASK.md` と同directoryの `ACTIVE_PLAN.md` を雛形にする。project固有AGENTS・検証基盤は同directoryの `PROJECT_AGENTS.md`・`VERIFICATION.md` と `~/.codex/agent-kit/scripts/agent-check.example.sh` を雛形にする
 - 複数エージェントの並行作業(2チャット体制)：開始は `$pair`。片方のチャットにだけタスクを渡せば、相手役割の指示はSkillがSendMessageで送る
 - 新しい規則・手順の置き場所判断：`~/.codex/agent-kit/docs/instruction-placement.md`

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Diagram"
+  short_description: "構成図・経路図をコードから生成し README に載せる（公式アイコン付き SVG / Mermaid）"
+  default_prompt: "Use $architecture-diagram to add or fix the architecture diagram."

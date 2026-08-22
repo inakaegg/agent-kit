@@ -36,6 +36,7 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 │   ├── pre-commit           # rejects environment-dependent absolute paths at commit time
 │   └── pre-push             # scans for secrets with gitleaks before push (full history on first push)
 ├── skills/                  # each skill has SKILL.md and agents/openai.yaml
+│   ├── architecture-diagram/ # + assets/diagram_template.py, references/pitfalls.md
 │   ├── ci-fix/
 │   ├── debug-loop/
 │   ├── dep-upgrade-safe/

@@ -55,6 +55,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   ├── pre-commit           # 環境依存の絶対パス混入をcommit時に拒否
 │   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
 ├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
+│   ├── architecture-diagram/ # + assets/diagram_template.py、references/pitfalls.md
 │   ├── ci-fix/
 │   ├── debug-loop/
 │   ├── dep-upgrade-safe/
