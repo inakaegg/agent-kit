@@ -14,18 +14,33 @@ ROOT = Path(__file__).resolve().parents[1]
 FALLBACK_IGNORED_DIR_NAMES = {"_ai", ".worktrees", ".git", "node_modules", "scratchpad"}
 
 
-def bundle_files() -> list[Path]:
+def _fallback_bundle_files(root: Path) -> list[Path]:
+    return [
+        p for p in root.rglob("*")
+        if p.is_file() and not FALLBACK_IGNORED_DIR_NAMES.intersection(p.relative_to(root).parts)
+    ]
+
+
+def bundle_files(root: Path = ROOT) -> list[Path]:
+    """公開bundleのファイル一覧。rootがgitリポジトリのrootそのものである場合だけ
+    git管理下（index）の一覧を使う。rootがgit管理外、別リポジトリのサブディレクトリ、
+    または一覧が空（外側リポジトリで無視されている等）の場合は、0件走査で通過させず
+    rglobフォールバックへ落とす。"""
     try:
+        toplevel = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True, check=True, text=True,
+        ).stdout.strip()
+        if Path(toplevel).resolve() != root.resolve():
+            return _fallback_bundle_files(root)
         out = subprocess.run(
-            ["git", "-C", str(ROOT), "ls-files", "-z", "--cached"],
+            ["git", "-C", str(root), "ls-files", "-z", "--cached"],
             capture_output=True, check=True,
         ).stdout
-        return [ROOT / p.decode("utf-8") for p in out.split(b"\0") if p]
+        files = [root / p.decode("utf-8") for p in out.split(b"\0") if p]
+        return files or _fallback_bundle_files(root)
     except (OSError, subprocess.CalledProcessError):
-        return [
-            p for p in ROOT.rglob("*")
-            if p.is_file() and not FALLBACK_IGNORED_DIR_NAMES.intersection(p.relative_to(ROOT).parts)
-        ]
+        return _fallback_bundle_files(root)
 
 REQUIRED_FILES = [
     "AGENTS.md",
