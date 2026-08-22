@@ -34,6 +34,7 @@
 - push、PR作成・更新は、そのターンの明示許可がある場合だけ行う。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成までを許可する。merge、base branchへのpush、public化は含まない。
 - PR作成前に、base/head、title、scope、test、未確認範囲、最新headの独立review結果を確認する。
+- リポジトリに `scripts/agent-check.sh` があれば、共有pre-push hookが `fast` モードで実行し、失敗したpushは止まる。手動で回す前提の検査を残さず、このスクリプトへ集約する。
 - PRは、ユーザーがDraftを指定しない限りreview-readyを既定とする。既知blockerは本文へ明記するが、勝手にDraftへ切り替えない。
 - 元のユーザープロンプト全文、個人情報、内部戦略、未公開情報をPRへ自動転載しない。必要な要件だけを安全なtask summaryへ整理する。
 - GitHub上のbot reviewは、ユーザーが依頼した場合またはproject方針が要求する場合に使う。botの名前やworkflow名をcommon policyへ固定しない。
@@ -70,3 +71,5 @@ project方針がない場合：
 - 初回pushでresourceが自動作成されるregistryでは、存在、namespace、default privacyを事前確認する。
 - source、container image、release artifact、package、deploy先は別々にvisibilityを確認する。
 - 作成、visibility変更、初回push後は、実際の公開範囲をAPIまたは管理画面で再確認し、報告する。
+- public化または初回のpublic pushの前に、次の2つを済ませて記録を残す（`_ai/reviews/` 等）。人間向け文書（README等）の読みやすさレビュー（`$docs-maintenance` のgate）で `VERDICT: LGTM` を得ること。READMEの手順のうち、ローカルで完結し副作用のない部分（インストール、起動、dry-run）を書いたとおりに実行して確かめること。
+- デプロイ、課金、公開を伴う手順は実行して確かめない。dry-runやplanがあればそれで代え、無ければ「未実行」と完了報告に明記する。
