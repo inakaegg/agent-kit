@@ -1,8 +1,9 @@
 ---
 name: architecture-diagram
 description: >-
-  Use when a README / SPEC / design doc needs an architecture or flow diagram: cloud
-  architecture with official icons (AWS / GCP / Azure / on-prem), deploy paths, request flows,
+  Use when a README / SPEC / design doc needs an architecture or flow diagram: system /
+  service / cloud architecture with official icons (AWS / GCP / Azure / k8s / on-prem / SaaS /
+  languages / generic), deploy paths, request flows,
   or when an existing diagram is unreadable (icons too big, text too small, labels overlapping,
   too small on GitHub). Japanese cues: 「構成図」「アーキテクチャ図」「図を入れて」「図が読みづらい」
   「アイコンが大きい」「文字が小さい」「図がかぶる」「Mermaidで」「diagramsで」.
@@ -10,12 +11,14 @@ description: >-
 
 # Architecture Diagram
 
-README と設計文書に入れる図を、コードから生成して保守できる形で作る。構成図は公式アイコン付きの
-Diagram as Code（mingrammer/diagrams）、流れ・状態・シーケンス・ER は Mermaid を使う。
+README と設計文書に入れる図を、コードから生成して保守できる形で作る。構成図（システム・サービス間・
+クラウド・オンプレ）は公式アイコン付きの Diagram as Code（mingrammer/diagrams）、流れ・状態・
+シーケンス・ER は Mermaid を使う。diagrams は AWS / GCP / Azure / k8s / オンプレ / SaaS /
+プログラミング言語 / 汎用のアイコンを同梱しており、クラウド以外の構成図にも使う。
 
 ## 使用条件
 
-- 構成図、デプロイ経路、リクエストの流れを README / SPEC / docs へ入れる
+- システム構成図、サービス間の構成、デプロイ経路、リクエストの流れを README / SPEC / docs へ入れる
 - 既存の図が読みにくい（アイコンと文字の比率、ラベルの重なり、GitHub 上で小さい）
 - 図の置き場と形式（PNG / SVG / Mermaid）を決める
 
@@ -23,7 +26,7 @@ Diagram as Code（mingrammer/diagrams）、流れ・状態・シーケンス・E
 
 | 図の種類 | 道具 | 理由 |
 |---|---|---|
-| クラウド構成図、デプロイ経路 | diagrams → SVG | 公式アイコン、クラスタの入れ子、配置の自由度 |
+| 構成図（システム・サービス間・クラウド・オンプレ）、デプロイ経路 | diagrams → SVG | 公式アイコン、クラスタの入れ子、配置の自由度 |
 | シーケンス、状態遷移、ER、簡単な流れ | Mermaid | GitHub が描画し、ズーム操作も付く。アイコンは出ない |
 
 完了判定: 図ごとに道具を決め、どの文書に置くかを決めた。正本は生成スクリプト（または Mermaid 本文）で、
