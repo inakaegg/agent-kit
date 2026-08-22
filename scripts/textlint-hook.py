@@ -28,9 +28,15 @@ MAX_OUTPUT_CHARS = 3000
 # 英語READMEの「🇯🇵 日本語: README.ja.md」のような相互リンク1行で英文全体に日本語規則が
 # かかってしまうため、日本語の文字（ひらがな・カタカナ・漢字）が英数字＋日本語文字の
 # JAPANESE_RATIO_MIN 以上を占める場合だけ対象とする。
-JAPANESE_RE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]")
+# 文字集合は git-hooks/pre-commit のperl判定と同じ範囲（ひらがな・カタカナ・々等の記号・
+# CJK統合漢字＋拡張A・半角カナ）。片方だけ変えないこと（tests/test_textlint_hook.py が突合する）。
+JAPANESE_RE = re.compile(
+    r"[\u3005\u3040-\u309f\u30a0-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff66-\uff9f]"
+)
 LATIN_RE = re.compile(r"[A-Za-z]")
-JAPANESE_RATIO_MIN = 0.05
+# 2%: 英語READMEの相互リンク1行（1%未満）は対象外、英語骨格に日本語の注記が数文ある
+# テンプレート（4%前後）は対象に入る。
+JAPANESE_RATIO_MIN = 0.02
 
 
 def is_japanese_document(path: Path) -> bool:

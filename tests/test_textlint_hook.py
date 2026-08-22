@@ -43,5 +43,37 @@ class IsJapaneseDocumentTest(unittest.TestCase):
                 self.assertTrue(hook.is_japanese_document(write(d, name, text)), name)
 
 
+class PerlAndPythonAgreeTest(unittest.TestCase):
+    """pre-commit（perl）と textlint-hook.py（python）の日本語文書判定が同じ結果を返すこと。"""
+
+    FIXTURES = (
+        "Plain English only.\n",
+        "# pair-watch\n\n日本語: [README.ja.md](README.ja.md)\n\n" + ("English prose. " * 40),
+        "日本語の文です。",
+        "カタカナだけ",
+        "々〜｡ｱｲｳ ＡＢＣ ー・\n",
+        "working memory。product specificationの正本ではない。\n" + ("The quick brown fox. " * 20),
+        "",
+    )
+
+    def test_same_verdict(self):
+        import re
+        import shutil
+        import subprocess
+        if shutil.which("perl") is None:
+            self.skipTest("perl not available")
+        hook = load_hook()
+        src = (KIT_ROOT / "git-hooks" / "pre-commit").read_text(encoding="utf-8")
+        m = re.search(r"perl -CSD -ne '([^']+)'", src)
+        self.assertIsNotNone(m, "pre-commit のperl判定式が見つからない")
+        expr = m.group(1)
+        with tempfile.TemporaryDirectory() as d:
+            for i, text in enumerate(self.FIXTURES):
+                p = write(d, f"f{i}.md", text)
+                py = hook.is_japanese_document(p)
+                pl = subprocess.run(["perl", "-CSD", "-ne", expr, str(p)]).returncode == 0
+                self.assertEqual(py, pl, f"fixture {i}: python={py} perl={pl}")
+
+
 if __name__ == "__main__":
     unittest.main()
