@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -63,7 +64,12 @@ class PublicBundleTests(unittest.TestCase):
         )
 
         scanned_suffixes = {".md", ".py", ".sh", ".yaml"}
-        for path in ROOT.rglob("*"):
+        # 公開bundle＝git管理下のファイル（.gitignoreと未追跡はgitの判断に従う）
+        tracked = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "-z", "--cached"],
+            capture_output=True, check=True,
+        ).stdout
+        for path in (ROOT / p.decode("utf-8") for p in tracked.split(b"\0") if p):
             if not path.is_file():
                 continue
             if path.suffix not in scanned_suffixes and path.parent.name != "git-hooks":

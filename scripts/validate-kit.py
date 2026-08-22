@@ -4,10 +4,28 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# 公開bundle＝git管理下（index）のファイル。.gitignoreと未追跡ファイルはgitの判断に従う。
+# gitが使えない環境（tarball展開など）だけ、内部ディレクトリを除いた全走査へフォールバックする。
+FALLBACK_IGNORED_DIR_NAMES = {"_ai", ".worktrees", ".git", "node_modules", "scratchpad"}
+
+
+def bundle_files() -> list[Path]:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "-z", "--cached"],
+            capture_output=True, check=True,
+        ).stdout
+        return [ROOT / p.decode("utf-8") for p in out.split(b"\0") if p]
+    except (OSError, subprocess.CalledProcessError):
+        return [
+            p for p in ROOT.rglob("*")
+            if p.is_file() and not FALLBACK_IGNORED_DIR_NAMES.intersection(p.relative_to(ROOT).parts)
+        ]
 
 REQUIRED_FILES = [
     "AGENTS.md",
@@ -140,7 +158,7 @@ def validate_no_private_source_copy() -> None:
         "personal account number": re.compile(r"\b" + "5237" + r"6271\b"),
     }
     scanned_suffixes = {".md", ".py", ".sh", ".yaml", ".yml"}
-    for path in ROOT.rglob("*"):
+    for path in bundle_files():
         if not path.is_file():
             continue
         # git-hooks配下は拡張子なし（pre-commit等）でも検査対象にする
