@@ -12,8 +12,25 @@ set -u
 zero=0000000000000000000000000000000000000000
 input="$(cat)"
 
-# リポジトリ固有の .git/hooks/pre-push があれば最後に委譲する。
+# リポジトリにscripts/agent-check.sh（検証コマンドの集約。templates/VERIFICATION.md参照）が
+# あれば、push前にfastモードで実行し、失敗したらpushを止める。手動の検査は忘れられるため、
+# 検査の実行そのものを機械に持たせる（共通AGENTS.md §5）。
+run_agent_check() {
+  [ -x scripts/agent-check.sh ] || return 0
+  if ! scripts/agent-check.sh fast; then
+    {
+      echo ""
+      echo "pre-push: scripts/agent-check.sh fast が失敗したためpushを中止しました。"
+      echo "  - 失敗した検査を修正してから再pushする"
+      echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+    } >&2
+    exit 1
+  fi
+}
+
+# リポジトリ固有の .git/hooks/pre-push があれば最後に委譲する（その前に検証スクリプトを実行）。
 run_local_hook() {
+  run_agent_check
   git_dir="$(git rev-parse --git-dir 2>/dev/null)"
   local_hook="$git_dir/hooks/pre-push"
   self="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"

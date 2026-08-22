@@ -166,6 +166,8 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 - `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
   秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
   pushを通します（`brew install gitleaks` で有効化）。
+- `pre-push` は続けて、リポジトリに `scripts/agent-check.sh`（検証コマンドの集約。`templates/VERIFICATION.md` 参照）が
+  あれば `fast` モードで実行し、失敗したらpushを拒否します。手動の検査は忘れられるので、実行をhookに持たせます。
 - リポジトリ固有の `.git/hooks/` がある場合は検査後に委譲します。意図的に絶対パスを
   許可するリポジトリでは `git config --local hooks.allowLocalPaths true` を設定します。
 
