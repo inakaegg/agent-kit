@@ -24,16 +24,31 @@ CONFIG_NAMES = (".textlintrc", ".textlintrc.json", ".textlintrc.yml", ".textlint
 # .claude/.codex/.agents配下はメモリ・セッション記録などの内部文書のため除外する。
 SKIP_DIR_NAMES = {"_ai", "scratchpad", "tmp", "node_modules", ".claude", ".codex", ".agents"}
 MAX_OUTPUT_CHARS = 3000
-# 日本語lintなので、日本語の文字（ひらがな・カタカナ・漢字）を含まないファイルは対象外。
-# 英語主体のリポジトリでopt-outせずに済ませるため。
-JAPANESE_RE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]")
+# 日本語lintなので、日本語の文書だけを対象にする。「日本語の文字を1つでも含む」では、
+# 英語READMEの「🇯🇵 日本語: README.ja.md」のような相互リンク1行で英文全体に日本語規則が
+# かかってしまうため、日本語の文字（ひらがな・カタカナ・漢字）が英数字＋日本語文字の
+# JAPANESE_RATIO_MIN 以上を占める場合だけ対象とする。
+# 文字集合は git-hooks/pre-commit のperl判定と同じ範囲（ひらがな・カタカナ・々等の記号・
+# CJK統合漢字＋拡張A・半角カナ）。片方だけ変えないこと（tests/test_textlint_hook.py が突合する）。
+JAPANESE_RE = re.compile(
+    r"[\u3005\u3040-\u309f\u30a0-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uff66-\uff9f]"
+)
+LATIN_RE = re.compile(r"[A-Za-z]")
+# 2%: 英語READMEの相互リンク1行（1%未満）は対象外、英語骨格に日本語の注記が数文ある
+# テンプレート（4%前後）は対象に入る。
+JAPANESE_RATIO_MIN = 0.02
 
 
-def contains_japanese(path: Path) -> bool:
+def is_japanese_document(path: Path) -> bool:
     try:
-        return JAPANESE_RE.search(path.read_text(encoding="utf-8", errors="ignore")) is not None
+        text = path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
         return False
+    ja = len(JAPANESE_RE.findall(text))
+    if ja == 0:
+        return False
+    latin = len(LATIN_RE.findall(text))
+    return ja / (ja + latin) >= JAPANESE_RATIO_MIN
 
 
 def repo_root_of(path: Path) -> Path | None:
@@ -81,7 +96,7 @@ def main() -> int:
         return 0
     if SKIP_DIR_NAMES.intersection(path.parts):
         return 0
-    if not contains_japanese(path):
+    if not is_japanese_document(path):
         return 0
     if shutil.which("textlint") is None:
         return 0  # 未導入環境ではpre-commit同様に黙って通す（fail-open）

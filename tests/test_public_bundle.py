@@ -35,7 +35,7 @@ class BundleFilesTests(unittest.TestCase):
         vk = load_validate_kit()
         with tempfile.TemporaryDirectory() as d:
             outer = Path(d)
-            subprocess.run(["git", "-C", str(outer), "init", "-q"], check=True)
+            subprocess.run(["git", "-C", str(outer), "init", "-q"], check=True, env=vk.git_env())
             (outer / ".gitignore").write_text("kit/\n", encoding="utf-8")
             kit = outer / "kit"
             kit.mkdir()

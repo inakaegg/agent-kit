@@ -52,12 +52,13 @@ run_textlint() {
     echo "pre-commit: textlint未導入のため日本語lintを省略します（agent-kit READMEのGit hooks節を参照）。" >&2
     return 0
   fi
-  # 日本語lintなので、日本語の文字を含まないファイルは対象外にする（perlが無い環境では
-  # 従来どおり全ファイルを検査する）。
+  # 日本語lintなので、日本語の文書だけを対象にする。日本語の文字が英数字＋日本語文字の2%未満
+  # （英語READMEの相互リンク1行など）なら英語文書とみなして飛ばす。perlが無い環境では
+  # 従来どおり全ファイルを検査する。scripts/textlint-hook.py と同じ判定。
   if command -v perl >/dev/null 2>&1; then
     staged_md="$(printf '%s\n' "$staged_md" | while IFS= read -r f; do
       [ -n "$f" ] || continue
-      if perl -CSD -ne '$j=1,last if /[\p{Hiragana}\p{Katakana}\p{Han}]/; END { exit($j ? 0 : 1) }' "$f" 2>/dev/null; then
+      if perl -CSD -ne '$j += () = /[\x{3005}\x{3040}-\x{309f}\x{30a0}-\x{30ff}\x{3400}-\x{4dbf}\x{4e00}-\x{9fff}\x{ff66}-\x{ff9f}]/g; $l += () = /[A-Za-z]/g; END { exit(($j > 0 && $j / ($j + $l) >= 0.02) ? 0 : 1) }' "$f" 2>/dev/null; then
         printf '%s\n' "$f"
       fi
     done)"
