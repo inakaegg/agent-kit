@@ -75,16 +75,19 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── VERIFICATION.md
 ├── scripts/
 │   ├── agent-check.example.sh
+│   ├── agent-check.sh       # kit自身の検査（validate-kit＋tests）。pre-pushとCIが実行
 │   ├── textlint-hook.py     # Claude Code用: .md編集直後の即時lint
 │   └── validate-kit.py
 └── tests/
-    └── test_public_bundle.py
+    ├── test_pre_push_hook.py
+    ├── test_public_bundle.py
+    └── test_textlint_hook.py
 ```
 
 各Skillは単独で配置しても参照が壊れないよう、必要なreferenceやassetを
 同じSkill directory内に保持します。
 
-`pair` skillは、英語の独立プラグイン **pair-watch** としても公開しています（同じGitHubアカウントのClaude Code plugin marketplace）。
+`pair` skillは、英語の独立プラグイン [pair-watch](https://github.com/inakaegg/pair-watch) としても公開しています（Claude Codeのplugin marketplaceから導入可）。
 
 ## 導入
 
@@ -166,6 +169,10 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 - `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
   秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
   pushを通します（`brew install gitleaks` で有効化）。
+- `pre-push` は続けて、`git config --local hooks.runAgentCheck true` でopt-inしたリポジトリでは
+  `scripts/agent-check.sh`（検証コマンドの集約。`templates/VERIFICATION.md` 参照）を `fast` モードで実行し、
+  失敗したらpushを拒否します。opt-inなのは、このhookが全リポジトリに効くため、cloneした他者の
+  リポジトリに入っているスクリプトをpushだけで実行させないためです。
 - リポジトリ固有の `.git/hooks/` がある場合は検査後に委譲します。意図的に絶対パスを
   許可するリポジトリでは `git config --local hooks.allowLocalPaths true` を設定します。
 

@@ -56,15 +56,18 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 │   └── VERIFICATION.md
 ├── scripts/
 │   ├── agent-check.example.sh
+│   ├── agent-check.sh       # the kit's own checks (validate-kit + tests), run by pre-push and CI
 │   ├── textlint-hook.py     # Claude Code: instant lint right after a .md edit
 │   └── validate-kit.py
 └── tests/
-    └── test_public_bundle.py
+    ├── test_pre_push_hook.py
+    ├── test_public_bundle.py
+    └── test_textlint_hook.py
 ```
 
 Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.
 
-The `pair` skill is also published standalone in English as **pair-watch**, a Claude Code plugin marketplace under the same GitHub account.
+The `pair` skill is also published standalone in English as [pair-watch](https://github.com/inakaegg/pair-watch), installable from its Claude Code plugin marketplace.
 
 ## Installation
 
@@ -127,6 +130,7 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
   ```
 
 - `pre-push` scans the pushed commit range with gitleaks (all reachable history on the first push) and rejects the push when it finds likely secrets. Without gitleaks installed it only warns and lets the push through (`brew install gitleaks` to enable).
+- `pre-push` then runs `scripts/agent-check.sh fast` and rejects the push when it fails. This is opt-in per repository: `git config --local hooks.runAgentCheck true`. The script collects the project's verification commands (see `templates/VERIFICATION.md`). Opt-in is deliberate: this hook applies to every repository on the machine. A script inside a cloned third-party repository must not run just because you pushed.
 - When a repository has its own `.git/hooks/`, the shared hooks delegate to it after their own checks. Repositories that intentionally allow absolute paths set `git config --local hooks.allowLocalPaths true`.
 
 ### Instant lint on edit (Claude Code)

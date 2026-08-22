@@ -4,10 +4,43 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# 公開bundle＝git管理下（index）のファイル。.gitignoreと未追跡ファイルはgitの判断に従う。
+# gitが使えない環境（tarball展開など）だけ、内部ディレクトリを除いた全走査へフォールバックする。
+FALLBACK_IGNORED_DIR_NAMES = {"_ai", ".worktrees", ".git", "node_modules", "scratchpad", "__pycache__", ".venv"}
+
+
+def _fallback_bundle_files(root: Path) -> list[Path]:
+    return [
+        p for p in root.rglob("*")
+        if p.is_file() and not FALLBACK_IGNORED_DIR_NAMES.intersection(p.relative_to(root).parts)
+    ]
+
+
+def bundle_files(root: Path = ROOT) -> list[Path]:
+    """公開bundleのファイル一覧。rootがgitリポジトリのrootそのものである場合だけ
+    git管理下（index）の一覧を使う。rootがgit管理外、別リポジトリのサブディレクトリ、
+    または一覧が空（外側リポジトリで無視されている等）の場合は、0件走査で通過させず
+    rglobフォールバックへ落とす。"""
+    try:
+        toplevel = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True, check=True, text=True,
+        ).stdout.strip()
+        if Path(toplevel).resolve() != root.resolve():
+            return _fallback_bundle_files(root)
+        out = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached"],
+            capture_output=True, check=True,
+        ).stdout
+        files = [root / p.decode("utf-8") for p in out.split(b"\0") if p]
+        return files or _fallback_bundle_files(root)
+    except (OSError, subprocess.CalledProcessError):
+        return _fallback_bundle_files(root)
 
 REQUIRED_FILES = [
     "AGENTS.md",
@@ -136,11 +169,12 @@ def validate_no_private_source_copy() -> None:
         "GitHub token": re.compile(r"\bghp_[A-Za-z0-9]{20,}\b"),
         "user home path": re.compile(r"/" r"Users/[^/\s]+"),
         "external volume path": re.compile(r"/" r"Volumes/"),
-        "personal handle": re.compile(r"\b" + "inaka" + r"egg\b", re.IGNORECASE),
+        # 作者の公開リポジトリへのリンク（github.com/<handle>/...）は混入ではないので除外する
+        "personal handle": re.compile(r"(?<!github\.com/)\b" + "inaka" + r"egg\b", re.IGNORECASE),
         "personal account number": re.compile(r"\b" + "5237" + r"6271\b"),
     }
     scanned_suffixes = {".md", ".py", ".sh", ".yaml", ".yml"}
-    for path in ROOT.rglob("*"):
+    for path in bundle_files():
         if not path.is_file():
             continue
         # git-hooks配下は拡張子なし（pre-commit等）でも検査対象にする
