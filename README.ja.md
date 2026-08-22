@@ -84,7 +84,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 各Skillは単独で配置しても参照が壊れないよう、必要なreferenceやassetを
 同じSkill directory内に保持します。
 
-`pair` skillは、英語の独立プラグイン **pair-watch** としても公開しています（同じGitHubアカウントのClaude Code plugin marketplace）。
+`pair` skillは、英語の独立プラグイン [pair-watch](https://github.com/inakaegg/pair-watch) としても公開しています（Claude Codeのplugin marketplaceから導入可）。
 
 ## 導入
 

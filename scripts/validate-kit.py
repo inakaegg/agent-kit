@@ -154,7 +154,8 @@ def validate_no_private_source_copy() -> None:
         "GitHub token": re.compile(r"\bghp_[A-Za-z0-9]{20,}\b"),
         "user home path": re.compile(r"/" r"Users/[^/\s]+"),
         "external volume path": re.compile(r"/" r"Volumes/"),
-        "personal handle": re.compile(r"\b" + "inaka" + r"egg\b", re.IGNORECASE),
+        # 作者の公開リポジトリへのリンク（github.com/<handle>/...）は混入ではないので除外する
+        "personal handle": re.compile(r"(?<!github\.com/)\b" + "inaka" + r"egg\b", re.IGNORECASE),
         "personal account number": re.compile(r"\b" + "5237" + r"6271\b"),
     }
     scanned_suffixes = {".md", ".py", ".sh", ".yaml", ".yml"}

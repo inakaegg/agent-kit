@@ -59,7 +59,7 @@ class PublicBundleTests(unittest.TestCase):
         forbidden = (
             re.compile(r"/" r"Users/[^/\s]+"),
             re.compile(r"/" r"Volumes/"),
-            re.compile(r"\b" + "inaka" + r"egg\b", re.IGNORECASE),
+            re.compile(r"(?<!github\.com/)\b" + "inaka" + r"egg\b", re.IGNORECASE),
             re.compile(r"\b" + "5237" + r"6271\b"),
         )
 
