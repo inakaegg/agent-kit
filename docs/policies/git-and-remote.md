@@ -34,7 +34,7 @@
 - push、PR作成・更新は、そのターンの明示許可がある場合だけ行う。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成までを許可する。merge、base branchへのpush、public化は含まない。
 - PR作成前に、base/head、title、scope、test、未確認範囲、最新headの独立review結果を確認する。
-- リポジトリに `scripts/agent-check.sh` があれば、共有pre-push hookが `fast` モードで実行し、失敗したpushは止まる。手動で回す前提の検査を残さず、このスクリプトへ集約する。
+- 自分のリポジトリでは `git config --local hooks.runAgentCheck true` を設定し、検証コマンドを `scripts/agent-check.sh` へ集約する。設定したリポジトリでは共有pre-push hookが `fast` モードで実行し、失敗したpushは止まる。opt-inなのは、cloneした他者のリポジトリのスクリプトをpushだけで実行させないためである。
 - PRは、ユーザーがDraftを指定しない限りreview-readyを既定とする。既知blockerは本文へ明記するが、勝手にDraftへ切り替えない。
 - 元のユーザープロンプト全文、個人情報、内部戦略、未公開情報をPRへ自動転載しない。必要な要件だけを安全なtask summaryへ整理する。
 - GitHub上のbot reviewは、ユーザーが依頼した場合またはproject方針が要求する場合に使う。botの名前やworkflow名をcommon policyへ固定しない。

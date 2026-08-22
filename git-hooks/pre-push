@@ -12,11 +12,15 @@ set -u
 zero=0000000000000000000000000000000000000000
 input="$(cat)"
 
-# リポジトリにscripts/agent-check.sh（検証コマンドの集約。templates/VERIFICATION.md参照）が
-# あれば、push前にfastモードで実行し、失敗したらpushを止める。手動の検査は忘れられるため、
-# 検査の実行そのものを機械に持たせる（共通AGENTS.md §5）。
+# リポジトリがopt-in（git config --local hooks.runAgentCheck true）している場合だけ、
+# scripts/agent-check.sh（検証コマンドの集約。templates/VERIFICATION.md参照）をfastモードで
+# 実行し、失敗したらpushを止める。手動の検査は忘れられるため実行を機械に持たせる
+# （共通AGENTS.md §5）。既定offなのは、このhookがcore.hooksPathで全リポジトリに効くため、
+# cloneした他者のリポジトリに含まれるスクリプトをpushだけで実行させないため。
 run_agent_check() {
+  [ "$(git config --type=bool --default=false hooks.runAgentCheck)" = "true" ] || return 0
   [ -x scripts/agent-check.sh ] || return 0
+  echo "pre-push: $(pwd)/scripts/agent-check.sh fast を実行します（hooks.runAgentCheck=true）" >&2
   if ! scripts/agent-check.sh fast; then
     {
       echo ""
