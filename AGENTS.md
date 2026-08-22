@@ -92,7 +92,7 @@
 - 指摘は盲目的に適用せず、**修正 / 非blockingとして記録 / 誤検知として反証**へtriageする。再現、失敗test、失敗経路のいずれでも裏付けられない指摘をblocking扱いしない。
 - blocking修正後は影響する検査を再実行し、修正後の成果物に対してその段階のfresh reviewをやり直す。ただし成果物がコード変更を含まない文書・計画で、全blocking指摘の事実関係を実データで裏取りして修正した場合は、fresh reviewのやり直しを省略し自己検証（該当検査の再実行と修正差分の点検）で代えてよい。security・data loss・互換性破壊に関わるblockingはこの省略の対象外とする。roundとして数えるのは、必要artifactを読めて `VERDICT` 行まで出した完了reviewだけとし、tool failureや `VERDICT` 欠落は数えない。
 - `VERDICT: LGTM` が出た時点でそのgateのreviewを終了する。各gateのreviewはround 2までを既定とする。round 1は全体を見る。round 2は前roundのblocking解消と修正差分の確認を主対象とし、新たに出た指摘はsecurity・data loss・互換性破壊を除きblockingとせず非blockingとして記録する。
-- round 2終了時にLGTMでない場合、security・data loss・互換性破壊のblockingが残るなら人間判断へ戻す。それ以外の残指摘だけなら非blockingとして記録してgate通過とし、完了報告へ明記する。roundを追加できるのは、この重大3種のblockingを修正した後の解消確認1回だけとする。
+- round 2終了時にLGTMでない場合、security・data loss・互換性破壊のblockingが残るなら人間判断へ戻す。それ以外の残指摘だけなら非blockingとして記録してgate通過とし、完了報告へ明記する。roundを追加できるのは、この重大3種のblockingを修正した後の解消確認1回だけとする。ただし人間向け文書の読みやすさレビュー（`$docs-maintenance` のgate）では、round 2で新たに「初見読者の目的不達」のblockingが出た場合に限り、修正後の解消確認を1回追加できる。
 - 同じblocking findingが新しい証拠なく反復する場合は、roundを重ねず人間判断へ戻す。
 - 同型の有効指摘が2件以上あれば、lint、test、type、Hook、CIのいずれかへ機械化する。
 - GitHub bot・CIを含む反復は `$pr-review-loop` に従う。最新head、全actionable finding、required CIを確認し、silence・rate limit・経過時間を承認とみなさない。最大5iterationで停止する。この反復回数は各gateのローカルreviewのround数とは別に数える。mergeは常に明示許可を必要とする。
