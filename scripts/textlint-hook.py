@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,16 @@ CONFIG_NAMES = (".textlintrc", ".textlintrc.json", ".textlintrc.yml", ".textlint
 # .claude/.codex/.agents配下はメモリ・セッション記録などの内部文書のため除外する。
 SKIP_DIR_NAMES = {"_ai", "scratchpad", "tmp", "node_modules", ".claude", ".codex", ".agents"}
 MAX_OUTPUT_CHARS = 3000
+# 日本語lintなので、日本語の文字（ひらがな・カタカナ・漢字）を含まないファイルは対象外。
+# 英語主体のリポジトリでopt-outせずに済ませるため。
+JAPANESE_RE = re.compile(r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]")
+
+
+def contains_japanese(path: Path) -> bool:
+    try:
+        return JAPANESE_RE.search(path.read_text(encoding="utf-8", errors="ignore")) is not None
+    except OSError:
+        return False
 
 
 def repo_root_of(path: Path) -> Path | None:
@@ -69,6 +80,8 @@ def main() -> int:
     if not path.is_file():
         return 0
     if SKIP_DIR_NAMES.intersection(path.parts):
+        return 0
+    if not contains_japanese(path):
         return 0
     if shutil.which("textlint") is None:
         return 0  # 未導入環境ではpre-commit同様に黙って通す（fail-open）

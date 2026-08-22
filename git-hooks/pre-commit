@@ -36,6 +36,17 @@ run_local_hook() {
 run_textlint() {
   staged_md="$(git diff --cached --name-only --diff-filter=d -- '*.md')"
   [ -n "$staged_md" ] || return 0
+  # 日本語lintなので、日本語の文字を含まないファイルは対象外にする（perlが無い環境では
+  # 従来どおり全ファイルを検査する）。
+  if command -v perl >/dev/null 2>&1; then
+    staged_md="$(printf '%s\n' "$staged_md" | while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      if perl -CSD -ne '$j=1,last if /[\p{Hiragana}\p{Katakana}\p{Han}]/; END { exit($j ? 0 : 1) }' "$f" 2>/dev/null; then
+        printf '%s\n' "$f"
+      fi
+    done)"
+    [ -n "$staged_md" ] || return 0
+  fi
   if [ "$(git config --type=bool --default=false hooks.skipTextlint)" = "true" ]; then
     return 0
   fi
