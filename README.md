@@ -63,6 +63,8 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 
 Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.
 
+The `pair` skill is also published standalone in English as [pair-watch](https://github.com/inakaegg/pair-watch), installable from its Claude Code plugin marketplace.
+
 ## Installation
 
 If some of these files already exist on your machine, do not overwrite them; check their contents and symlink targets before switching. Replace `/absolute/path/to/common-agents` with the absolute path of your clone.
