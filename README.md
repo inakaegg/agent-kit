@@ -64,7 +64,7 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 
 Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.
 
-The `pair` skill is also published standalone in English as [pair-watch](https://github.com/inakaegg/pair-watch), installable from its Claude Code plugin marketplace.
+The `pair` skill is also published standalone in English as **pair-watch**, a Claude Code plugin marketplace under the same GitHub account.
 
 ## Installation
 
