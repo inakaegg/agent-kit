@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -12,6 +13,18 @@ ROOT = Path(__file__).resolve().parents[1]
 # 公開bundle＝git管理下（index）のファイル。.gitignoreと未追跡ファイルはgitの判断に従う。
 # gitが使えない環境（tarball展開など）だけ、内部ディレクトリを除いた全走査へフォールバックする。
 FALLBACK_IGNORED_DIR_NAMES = {"_ai", ".worktrees", ".git", "node_modules", "scratchpad", "__pycache__", ".venv"}
+
+
+# git hookの中から実行されると、gitがhookへ渡す GIT_DIR 等が子プロセスに継承され、
+# -C で指定した別ディレクトリではなくhook元のリポジトリを見てしまう。gitを呼ぶときは外す。
+GIT_ENV_KEYS_TO_DROP = (
+    "GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+    "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX",
+)
+
+
+def git_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if k not in GIT_ENV_KEYS_TO_DROP}
 
 
 def _fallback_bundle_files(root: Path) -> list[Path]:
@@ -29,13 +42,13 @@ def bundle_files(root: Path = ROOT) -> list[Path]:
     try:
         toplevel = subprocess.run(
             ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
-            capture_output=True, check=True, text=True,
+            capture_output=True, check=True, text=True, env=git_env(),
         ).stdout.strip()
         if Path(toplevel).resolve() != root.resolve():
             return _fallback_bundle_files(root)
         out = subprocess.run(
             ["git", "-C", str(root), "ls-files", "-z", "--cached"],
-            capture_output=True, check=True,
+            capture_output=True, check=True, env=git_env(),
         ).stdout
         files = [root / p.decode("utf-8") for p in out.split(b"\0") if p]
         return files or _fallback_bundle_files(root)
