@@ -1,4 +1,4 @@
 interface:
   display_name: "Architecture Diagram"
-  short_description: "システム構成図・経路図をコードから生成し README に載せる（公式アイコン付き SVG / Mermaid）"
+  short_description: "Generate architecture and flow diagrams from code and put them in the README (official-icon SVG / Mermaid)"
   default_prompt: "Use $architecture-diagram to add or fix the architecture diagram."
