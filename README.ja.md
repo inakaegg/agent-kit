@@ -87,7 +87,12 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 各Skillは単独で配置しても参照が壊れないよう、必要なreferenceやassetを
 同じSkill directory内に保持します。
 
-`pair` skillは、英語の独立プラグイン [pair-watch](https://github.com/inakaegg/pair-watch) としても公開しています（Claude Codeのplugin marketplaceから導入可）。
+Skillの本体・reference・assetは、意図して日本語のまま置いています。作者が日常的に
+動かしている構成そのままで、その形で検証しているためです。英語を主にしているのは
+外向きの層だけです。起動可否を決めるfrontmatterの `description`（日本語の合図語も
+併記）、Codex向けの `agents/openai.yaml`、このREADME、commitの件名が該当します。
+
+`pair` skillは、英語の独立プラグイン [pair-watch](https://github.com/inakaegg/pair-watch) としても公開しています（Claude Codeのplugin marketplaceから導入可）。本体も英語へ翻訳してあります。
 
 ## 導入
 
