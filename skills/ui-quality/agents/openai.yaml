@@ -1,4 +1,4 @@
 interface:
   display_name: "UI Quality"
   short_description: "Design web and native UI and verify it iteratively on the real screen"
-  default_prompt: "Use $ui-quality to design and implement the target UI, then verify it on the real screen to finished quality."
+  default_prompt: "Use $ui-quality to design and implement the target UI, then verify it on the real screen until it is production-ready."
