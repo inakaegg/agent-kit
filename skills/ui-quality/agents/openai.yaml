@@ -1,4 +1,4 @@
 interface:
   display_name: "UI Quality"
-  short_description: "Web・ネイティブUIを設計し、実画面で反復検証する"
-  default_prompt: "$ui-qualityを使って、対象UIを設計・実装し、実画面で完成品質まで検証してください。"
+  short_description: "Design web and native UI and verify it iteratively on the real screen"
+  default_prompt: "Use $ui-quality to design and implement the target UI, then verify it on the real screen until it is production-ready."

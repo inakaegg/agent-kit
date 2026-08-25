@@ -65,7 +65,9 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 
 Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.
 
-The two-seat setup (implementer plus watcher) is not bundled in this kit; it is published as the standalone [pair-watch](https://github.com/inakaegg/pair-watch) plugin (installable from its Claude Code plugin marketplace). That plugin is the single source for this workflow.
+Skill bodies, references, and assets are written in Japanese on purpose: this is the kit its author runs every day, and it is verified in that form. What is English-first is the outward-facing layer — the `description` front matter that decides whether a skill fires (Japanese trigger cues kept alongside it), the Codex-side `agents/openai.yaml` metadata, this README, and the subject line of new commits (earlier history is left as it is).
+
+The two-seat setup (implementer plus watcher) is not bundled in this kit; it is published as the standalone [pair-watch](https://github.com/inakaegg/pair-watch) plugin (installable from its Claude Code plugin marketplace), with the skill body translated into English as well. That plugin is the single source for this workflow.
 
 ## Installation
 

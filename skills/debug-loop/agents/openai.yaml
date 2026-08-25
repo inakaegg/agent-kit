@@ -1,4 +1,4 @@
 interface:
   display_name: "Debug Loop"
-  short_description: "非自明な不具合と回帰を再現・証拠・履歴から根因まで切り分け"
+  short_description: "Isolate non-obvious defects and regressions down to root cause from repro, evidence, and history"
   default_prompt: "Use $debug-loop to investigate this failure from evidence."
