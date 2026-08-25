@@ -107,6 +107,13 @@ for skill_dir in "$agent_kit_dir"/skills/*; do
 done
 ```
 
+The two-seat setup (`$pair-watch`) is not under `skills/`, so the symlinks above do not install it. Add it as a Claude Code plugin:
+
+```text
+/plugin marketplace add https://github.com/inakaegg/pair-watch
+/plugin install pair-watch@pair-watch
+```
+
 ### Git hooks
 
 These hooks are standard Git machinery, not an agent-only feature. They are in the kit as the last line of defense that holds agents and humans to the same rules. Set `git-hooks/` as the shared hooks directory via `core.hooksPath`:

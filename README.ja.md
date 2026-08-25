@@ -131,6 +131,13 @@ for skill_dir in "$agent_kit_dir"/skills/*; do
 done
 ```
 
+2チャット体制（`$pair-watch`）は `skills/` に含まれないため、上のsymlinkでは入りません。Claude Codeのプラグインとして追加してください。
+
+```text
+/plugin marketplace add https://github.com/inakaegg/pair-watch
+/plugin install pair-watch@pair-watch
+```
+
 ### Git hooks
 
 このhookはエージェント専用の機能ではなく、Gitの標準機構です。エージェントにも人間にも
