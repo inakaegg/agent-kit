@@ -30,7 +30,6 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 │   ├── instruction-placement.md
 │   ├── skill-authoring.md
 │   └── policies/
-│       ├── agent-collaboration.md
 │       └── git-and-remote.md
 ├── git-hooks/
 │   ├── pre-commit           # checks secrets, environment-dependent paths, Japanese lint at commit time

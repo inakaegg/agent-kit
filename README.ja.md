@@ -49,7 +49,6 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   ├── instruction-placement.md
 │   ├── skill-authoring.md
 │   └── policies/
-│       ├── agent-collaboration.md
 │       └── git-and-remote.md
 ├── git-hooks/
 │   ├── pre-commit           # 秘密情報・環境依存絶対パス・日本語lintをcommit時に検査
