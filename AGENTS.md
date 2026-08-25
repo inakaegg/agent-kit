@@ -109,7 +109,7 @@
 - 構成図・経路図：`$architecture-diagram`。設計資料・命名の前の対応表作成：`$semantic-generation`
 - CLI優先・実行可能経路の確認・fixture・解説文書：`docs/policies/quality-details.md`
 - 契約・active planの雛形：`templates/TASK.md` と同directoryの `ACTIVE_PLAN.md`。project固有AGENTS・検証基盤の雛形：同directoryの `PROJECT_AGENTS.md`・`VERIFICATION.md` と `scripts/agent-check.example.sh`
-- 複数エージェントの並行作業（2チャット体制）の開始：`$pair`。片方のチャットにだけタスクを渡せば、相手役割の指示はSkillがSendMessageで送る
+- 複数エージェントの並行作業（2チャット体制）の開始：`$pair-watch`（[pair-watch](https://github.com/inakaegg/pair-watch) プラグイン）。片方のチャットにだけタスクを渡せば、相手役割の指示はSkillが送る。Codexチャットで起動された側は監視役（Claude）からのinbox指示を待つ
 - 新しい規則・手順の置き場所判断：`docs/instruction-placement.md`
 - Skillの新規作成・改訂：`docs/skill-authoring.md`
 - 個人PCのmodel保存先、時刻・log既定：存在する場合だけ `~/.codex/local-policies/local-environment.md`（これはkit外の個人設定で、Codex利用者のみ）

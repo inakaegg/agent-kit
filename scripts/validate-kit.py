@@ -76,7 +76,6 @@ REQUIRED_FILES = [
 ]
 
 EXPECTED_SKILLS = {
-    "pair",
     "debug-loop",
     "evaluation-loop",
     "large-work",

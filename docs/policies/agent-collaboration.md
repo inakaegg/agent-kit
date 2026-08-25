@@ -2,9 +2,9 @@
 
 > 対象: 2つ以上のコーディングエージェント(例: Claude fable系 + Claude Opus、Claude + Codex)が同一タスクで並行し、互いのチャット履歴を直接監視して連携する場合。単独作業では読まなくてよい。
 
-**現行の入口は `$pair` であり、`$agent-collab` は廃止された。** 現行の詳しい手順の正本は `common-agents/skills/pair/SKILL.md` とその `assets/`・`references/` にあり、本文書はそれを置き換えない。現行のpairのtransportは相手タイプで切り替わる(Claude相手: SendMessage受信駆動、Codex相手: ファイルinbox/outbox+rollout監査)。常駐監視scriptは使わない。
+**現行の入口は `$pair-watch` であり、`$agent-collab` は廃止された。** 現行の詳しい手順の正本は [pair-watch](https://github.com/inakaegg/pair-watch) プラグインの `SKILL.md` とその `assets/`・`references/` にあり、本文書はそれを置き換えない。現行のpair-watchのtransportは相手タイプで切り替わる(Claude相手: SendMessage受信駆動、Codex相手: ファイルinbox/outbox+rollout監査)。常駐監視scriptは使わない。
 
-本文書末尾の「旧方式」節にある常駐監視・JSONL pollingの手順は、`$agent-collab` 時代の歴史資料であり、現行の規範ではない。以下の「役割分担」から「切替と引き継ぎ」までは、現行の `$pair` 体制でも有効な運用規則である。
+本文書末尾の「旧方式」節にある常駐監視・JSONL pollingの手順は、`$agent-collab` 時代の歴史資料であり、現行の規範ではない。以下の「役割分担」から「切替と引き継ぎ」までは、現行の `$pair-watch` 体制でも有効な運用規則である。
 
 ## 役割分担
 
@@ -32,7 +32,7 @@
 
 ## 旧方式(廃止): `$agent-collab` の常駐監視
 
-> 以下は廃止済みの `$agent-collab` 方式の記録であり、現行の規範ではない。現行の入口は `$pair`、現行手順の正本は `common-agents/skills/pair/SKILL.md` とその `assets/` である。
+> 以下は廃止済みの `$agent-collab` 方式の記録であり、現行の規範ではない。現行の入口は `$pair-watch`、現行手順の正本は [pair-watch](https://github.com/inakaegg/pair-watch) プラグインの `SKILL.md` とその `assets/` である。
 
 開始手順は `$agent-collab` Skillに自動化されている。各エージェントのチャットで任意のタイミングで `/agent-collab` と打てば、役割の自動判定(モデル種別から)、相手セッションの自動発見と増分監視の常駐起動、開始宣言まで行う。監視スクリプトの正本はそのSkillの `assets/watch-partner.py` であり、毎回書き直さない。
 
