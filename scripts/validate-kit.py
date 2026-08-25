@@ -156,10 +156,11 @@ def validate_agents_references() -> None:
     for skill_name in sorted(EXPECTED_SKILLS):
         if f"`${skill_name}`" not in agents_text:
             fail(f"AGENTS.md does not reference Skill by name: {skill_name}")
+    # kit内はAGENTS.md §1の規則どおり相対path、kit外の個人設定だけ絶対pathを要求する
     required_paths = {
-        "~/.codex/agent-kit/docs/policies/git-and-remote.md",
-        "~/.codex/agent-kit/templates/TASK.md",
-        "~/.codex/agent-kit/docs/instruction-placement.md",
+        "docs/policies/git-and-remote.md",
+        "templates/TASK.md",
+        "docs/instruction-placement.md",
         "~/.codex/local-policies/local-environment.md",
     }
     for reference in sorted(required_paths):

@@ -58,10 +58,10 @@ class PublicBundleTests(unittest.TestCase):
             "ui-verification",
         ):
             self.assertIn(f"`${skill_name}`", text)
-        self.assertIn("`~/.codex/agent-kit/templates/TASK.md`", text)
-        self.assertIn("`~/.codex/agent-kit/docs/instruction-placement.md`", text)
+        self.assertIn("`templates/TASK.md`", text)
+        self.assertIn("`docs/instruction-placement.md`", text)
         self.assertIn(
-            "`~/.codex/agent-kit/docs/policies/git-and-remote.md`",
+            "`docs/policies/git-and-remote.md`",
             text,
         )
         self.assertIn(

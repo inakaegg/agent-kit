@@ -7,7 +7,10 @@
 
 ## Status
 
-Ready | In progress | Blocked | Done
+- Branch: <task branch名>
+- 期間: <開始日> 〜 <終了日または進行中>
+- 結果: 未完 | 完了 | 中止 | 引き継ぎ先: <slug>
+- 状態: Ready | In progress | Blocked | Done
 
 ## Goal / user value
 
