@@ -108,5 +108,58 @@ class PreCommitBranchGuardTests(unittest.TestCase):
         self.assertEqual(self._commit(repo, "Detached allowed / 許可済み"), 0)
 
 
+class PreCommitLinkCheckTests(unittest.TestCase):
+    def _repo(self) -> Path:
+        repo = make_repo(self)
+        env = clean_env()
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@example.invalid"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "core.hooksPath", str(PRE_COMMIT_HOOK.parent)], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "hooks.skipTextlint", "true"], check=True, env=env)
+        return repo
+
+    def _commit_md(self, repo: Path, body: str) -> int:
+        (repo / "docs").mkdir(exist_ok=True)
+        (repo / "docs" / "a.md").write_text(body, encoding="utf-8")
+        env = clean_env()
+        subprocess.run(["git", "-C", str(repo), "add", "docs/a.md"], check=True, env=env)
+        result = subprocess.run(
+            ["git", "-C", str(repo), "commit", "-q", "-m", "Add doc / 文書を追加"],
+            capture_output=True, text=True, env=env,
+        )
+        return result.returncode
+
+    def test_existing_relative_link_passes(self):
+        repo = self._repo()
+        (repo / "README.md").write_text("x\n", encoding="utf-8")
+        self.assertEqual(self._commit_md(repo, "see [readme](../README.md)\n"), 0)
+
+    def test_broken_relative_link_is_rejected(self):
+        repo = self._repo()
+        self.assertNotEqual(self._commit_md(repo, "see [gone](../missing.md)\n"), 0)
+
+    def test_anchor_suffix_is_stripped(self):
+        repo = self._repo()
+        (repo / "README.md").write_text("x\n", encoding="utf-8")
+        self.assertEqual(self._commit_md(repo, "see [s](../README.md#sec)\n"), 0)
+
+    def test_urls_and_anchors_are_ignored(self):
+        repo = self._repo()
+        body = "[u](https://example.invalid/x) [a](#local) [m](mailto:x@example.invalid)\n"
+        self.assertEqual(self._commit_md(repo, body), 0)
+
+    def test_links_inside_code_fence_are_ignored(self):
+        repo = self._repo()
+        self.assertEqual(self._commit_md(repo, "```\n[e](../missing.md)\n```\n"), 0)
+
+    def test_opt_out_config_skips_check(self):
+        repo = self._repo()
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "--local", "hooks.skipLinkCheck", "true"],
+            check=True, env=clean_env(),
+        )
+        self.assertEqual(self._commit_md(repo, "see [gone](../missing.md)\n"), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

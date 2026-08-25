@@ -111,6 +111,52 @@ TARGETS
   exit 1
 }
 
+# stagedの.mdについて、相対リンクの参照先が存在するかを検査する。決定論的で
+# LLMを呼ばない（数ms）。scheme付きURL・アンカーのみ・絶対パスは対象外。
+# コードフェンス内のリンク例は検査しない。opt-outは
+# git config --local hooks.skipLinkCheck true。perlが無い環境では省略する（fail-open）。
+# 検査対象はworking treeの内容で、部分stage時はstage内容と差が出得る（textlintと同じ）。
+run_linkcheck() {
+  if [ "$(git config --type=bool --default=false hooks.skipLinkCheck)" = "true" ]; then
+    return 0
+  fi
+  command -v perl >/dev/null 2>&1 || return 0
+  staged_md="$(git diff --cached --name-only --diff-filter=d -- '*.md')"
+  [ -n "$staged_md" ] || return 0
+  broken="$(printf '%s\n' "$staged_md" | perl -CSD -e '
+    use File::Basename;
+    while (my $f = <STDIN>) {
+      chomp $f; next unless -f $f;
+      open my $fh, "<:encoding(UTF-8)", $f or next;
+      my $fence = 0; my $ln = 0;
+      while (my $line = <$fh>) {
+        $ln++;
+        if ($line =~ /^\s*(```|~~~)/) { $fence = !$fence; next; }
+        next if $fence;
+        while ($line =~ /\]\(([^)\s]+)\)/g) {
+          my $t = $1;
+          next if $t =~ m{^[a-z][a-z0-9+.-]*:};
+          next if $t =~ m{^[#/]};
+          $t =~ s/#.*$//;
+          next if $t eq "";
+          my $p = dirname($f) . "/" . $t;
+          print "  $f:$ln -> $t\n" unless -e $p;
+        }
+      }
+    }
+  ')"
+  [ -z "$broken" ] && return 0
+  {
+    echo "pre-commit: Markdownの相対リンクに参照先が存在しないものがあります。"
+    echo "$broken"
+    echo "対応:"
+    echo "  - リンク先のパスを修正するか、ファイルを追加する"
+    echo "  - このリポジトリで意図的に検査しない場合: git config --local hooks.skipLinkCheck true"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+}
+
 # detached HEADへのcommitを止める。branchを確認せずにcommitして無関係な
 # 履歴系列へ載せる事故を防ぐ（共通AGENTS.md §8「commit前にbranch確認」の機械化）。
 # rebase・am進行中はgitが正規にdetachedで動くため検査しない。
@@ -161,6 +207,7 @@ run_gitleaks() {
 run_branch_guard
 run_gitleaks
 run_textlint
+run_linkcheck
 
 if [ "$(git config --type=bool --default=false hooks.allowLocalPaths)" = "true" ]; then
   run_local_hook "$@"
