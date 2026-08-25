@@ -1,4 +1,4 @@
 interface:
   display_name: "Docs Maintenance"
-  short_description: "README・仕様・内部メモを役割と公開範囲で整理・検証"
+  short_description: "Organize and verify README, specs, and internal notes by role and visibility"
   default_prompt: "Use $docs-maintenance to organize and verify this repository documentation."

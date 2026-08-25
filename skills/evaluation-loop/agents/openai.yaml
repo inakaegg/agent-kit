@@ -1,4 +1,4 @@
 interface:
   display_name: "Evaluation Loop"
-  short_description: "複数案と生成品質を同じデータで比較し採否を実測判断"
+  short_description: "Compare rival approaches and output quality on the same data, and decide adoption by measurement"
   default_prompt: "Use $evaluation-loop to compare these approaches with evidence."

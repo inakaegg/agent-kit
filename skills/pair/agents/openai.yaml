@@ -1,4 +1,4 @@
 interface:
   display_name: "Pair"
-  short_description: "片側1回の指示で始める並行体制(役割自動判定。相手がClaudeならSendMessage、Codexチャットならファイルinbox/outbox+rollout監査で連携)"
+  short_description: "A two-chat setup started from one side with a single instruction (roles detected automatically; SendMessage when the peer is Claude, file inbox/outbox plus rollout audit when it is a Codex chat)"
   default_prompt: "Pair is initiated from the Claude side. If $pair is invoked inside a Codex session, tell the user that the Claude watcher will deliver a pair-inbox file, stop, and follow that inbox's instructions once it is provided."
