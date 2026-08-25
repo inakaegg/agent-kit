@@ -1,13 +1,13 @@
 # 文書・仕様・内部メモのポリシー
 
-この文書は、README、SPEC、ROADMAP、ADR、公開docs、handoff、task fileを作成・再編するときだけ読む。
+この文書は、README、SPEC、ROADMAP、設計判断の記録、公開docs、引き継ぎ、task fileを作成・再編するときだけ読む。
 
 ## 1. 文書の役割を先に決める
 
 文書を変更する前に、次を明確にする。
 
 - 読者：製品利用者、library利用者、開発者、採用担当者、外部service担当者、個人の将来の自分
-- 目的：理解、利用、評価、再現、実装契約、将来計画、作業handoff
+- 目的：理解、利用、評価、再現、実装契約、将来計画、作業の引き継ぎ
 - 時間軸：現在仕様、将来方針、過去の経緯、作業中状態
 - 詳細の正本：どの文書またはcode/schemaが唯一のsource of truthか
 
@@ -20,7 +20,7 @@ projectが別構成を定めている場合はそれを優先する。定めが�
 - 設計判断と理由：`docs/decisions/` のADR
 - 将来方針：`ROADMAP.md`
 - project全体の入口：`README.md`
-- 未確定の内部task・仮説・handoff：`_ai/`
+- 未確定の内部task・仮説・引き継ぎ：`_ai/`
 - golden case・fixture：`tests/` 等のtest資産
 - agent向けproject固有規則：project `AGENTS.md`
 
@@ -46,7 +46,7 @@ projectが別構成を定めている場合はそれを優先する。定めが�
 - AI会話由来の未整理情報、個人メモ、調査途中、未確定の仮説
 - 収益化・公開戦略、paid differentiator、非公開task
 - local path、空き容量、一時測定、agentの作業都合
-- 次chat向けhandoff、active plan
+- 次chat向けの引き継ぎ、active plan
 
 `_ai/`は個人projectではgit管理外を既定とする。teamで共有すべきexecution planは、projectが定めるversion管理されたplan directoryへ置いてよい。
 
@@ -86,4 +86,4 @@ projectが別構成を定めている場合はそれを優先する。定めが�
 - 文書の一文を固定するより、必要な意味、link、公式名称、安全条件を検査する。
 - public docsへuser prompt全文を自動転載しない。要件を必要十分に要約し、個人・内部情報を除く。
 - 編集後は、触った文書に圧縮パスを1回かける（反復、コードから自明な記述、陳腐化した文を除く）。行数減だけを簡素化の根拠にしない。
-- 公開・提出する人間向けの重要文書は、docs-maintenance Skillの `assets/DOCS_REVIEW_PROMPT.md` を使い、fresh contextの読みやすさレビュー（round 2既定）で `VERDICT: LGTM` を得てから出す。reviewerの資格条件も同ファイルが正本。
+- 公開・提出する人間向けの重要文書は、docs-maintenance Skillの `assets/DOCS_REVIEW_PROMPT.md` を使い、履歴を共有しない別セッションの読みやすさレビュー（2回既定）で `VERDICT: LGTM` を得てから出す。reviewerの資格条件も同ファイルが正本。

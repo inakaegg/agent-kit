@@ -49,8 +49,8 @@
 
 1. ...
 2. ...
-3. 必要なproject quality gateが成功する
-4. 必要なfresh-context reviewにblocking findingがない
+3. 必要なprojectの検査が成功する
+4. 必要な独立レビュー（履歴を共有しない別セッション）に修正必須の指摘がない
 
 ## Verification and evidence
 

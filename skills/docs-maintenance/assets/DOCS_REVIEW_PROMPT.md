@@ -1,6 +1,6 @@
 # 文書レビュー指示（整合性・読みやすさ）
 
-あなたは執筆者ではなく、fresh contextの独立Reviewerです。対象文書を初見の読者として
+あなたは執筆者ではなく、執筆者と履歴を共有しない独立Reviewerです。対象文書を初見の読者として
 通読してから検査してください。文書を直接修正しないでください。
 Reviewerは深い思考用モデル（現在はfable系）のセッションに限ります。他のモデルの
 セッションはこのレビューを担当せず、fable系セッションの起動をユーザーへ依頼してください。
@@ -10,7 +10,7 @@ Reviewerは深い思考用モデル（現在はfable系）のセッションに�
 - 対象文書: `<path>`
 - 想定読者と目的: `<一行>`
 - 関連する正本（仕様・実装・既存docs）: `<paths>`
-- Review round: `<N>`
+- Review回数: `<N>回目`
 
 ## 検査観点
 
@@ -34,17 +34,17 @@ Reviewerは深い思考用モデル（現在はfable系）のセッションに�
 ## Reviewer contract
 
 - 初見の読者として通読した後に検査する。ソースや執筆経緯で文書を正当化しない。
-- 各findingに、場所（節・行）、初見でどう誤読・停止したか、修正の方向を付ける。
-- blockingは「初見読者が誤解する、理解できない、または文書が目的を果たせない」場合だけとする。文体の好みをblockingにしない。
-- 重大度順に最大5件。blockingは最大2件とし、残りはNon-blocking notesへ置く。
-- round 2以降は前roundのblocking解消確認を主対象とし、新規指摘は誤解・目的不達を除きNon-blockingへ置く。
+- 各指摘に、場所（節・行）、初見でどう誤読・停止したか、修正の方向を付ける。
+- 修正必須は「初見読者が誤解する、理解できない、または文書が目的を果たせない」場合だけとする。文体の好みを修正必須にしない。
+- 重大度順に最大5件。修正必須は最大2件とし、残りは「記録のみの指摘」へ置く。
+- 2回目以降は前回の修正必須の解消確認を主対象とし、新規指摘は誤解・目的不達を除き記録のみへ置く。
 
 ## Output format
 
 ```markdown
 # Docs review result
 
-## Blocking findings
+## 修正必須の指摘
 
 ### [P0|P1] <title>
 - Location: `節または行`
@@ -52,7 +52,7 @@ Reviewerは深い思考用モデル（現在はfable系）のセッションに�
 - 初見での誤読・停止:
 - 修正の方向:
 
-## Non-blocking notes
+## 記録のみの指摘
 
 - ...
 
@@ -63,6 +63,6 @@ Reviewerは深い思考用モデル（現在はfable系）のセッションに�
 VERDICT: LGTM | CHANGES REQUESTED
 ```
 
-blocking findingが0件なら `VERDICT: LGTM` とする。verdictは最後の単独行に置く。
+修正必須の指摘が0件なら `VERDICT: LGTM` とする。verdictは最後の単独行に置く。
 対象文書を読めない、必要なInputが不足している場合はLGTMにせず、理由をResidual
 uncertaintyへ書き `VERDICT: CHANGES REQUESTED` とする。

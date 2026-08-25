@@ -40,7 +40,7 @@ description: >-
 - task文書では、`User requirements / Confirmed facts / Assumptions` を分ける。
 - assumptionを制約として採用する場合、確認しない理由と外れた影響を書く。
 
-## 3. baselineと候補を列挙する
+## 3. 基準（現行方式）と候補を列挙する
 
 最低限、次を候補に含める。
 
@@ -98,14 +98,14 @@ description: >-
 ## 8. loop
 
 ```text
-baseline
+基準（現行方式）
 → candidate実装
 → 同一dataで測定
 → failure/regression分類
 → validな修正
 → development set再測定
 → held-out確認
-→ fresh-context review
+→ 履歴を共有しない別セッションのreview
 → 採用 / 棄却 / 人間判断
 ```
 
@@ -117,4 +117,4 @@ baseline
 - 見積りの2倍を超えるcost/resourceが必要
 - 独自方式なしの最小構成で目的を十分達成できる
 
-停止時も、失敗した方式、data、metric、artifactを残し、同じ実験を後で繰り返さない。
+停止時も、失敗した方式、data、metric、成果物を残し、同じ実験を後で繰り返さない。

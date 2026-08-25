@@ -1,7 +1,7 @@
 # Codex相手のtransport — ファイルinbox/outbox + rollout監査
 
 相手がCodex CLIの対話チャットの場合に、SKILL.md手順3〜6の**通信・発見・監視の手段だけ**を
-置き換える手順。gate運用・reviewer選定・commit条件・briefの運用規則はSKILL.md手順5に従う。
+置き換える手順。レビュー運用・reviewer選定・commit条件・briefの運用規則はSKILL.md手順5に従う。
 本書のpath表記はskill root基準(例: `assets/impl-brief-codex.md`)。
 
 Codex側はSendMessage/ListAgents/Monitorに参加できないため、通信は合意ファイル、
@@ -21,7 +21,7 @@ Codex側はSendMessage/ListAgents/Monitorに参加できないため、通信は
   拒否される。その場合は実装役に回避させず、worktree・branch作成だけ監視役が代行する
   (Git基盤操作でありコード変更には当たらない)。
 - 1チャット内でのサブエージェント委任(codexプラグインのtask委任等)はpairの対象外。
-  それは監督付き委任であり、共通AGENTS §7のgate運用だけで足りる。
+  それは監督付き委任であり、共通AGENTS §7のレビュー運用だけで足りる。
 
 ## 通信ファイル
 
@@ -56,7 +56,7 @@ git commitの対象にもしない(`_ai/` がgit管理下のrepositoryでは対�
   rolloutまたはoutboxの更新(=実装役が動き出した形跡)が確認できなければ、そのとき初めて
   4Cの促しをユーザーへ依頼する(フォールバック)。報告はoutboxで受け、裏取りはworktreeのread-only確認とrolloutの
   絞り読みで行う。停滞監視はoutboxとrolloutのmtimeを対象に15分(検知したらinbox+ユーザー報告)。
-  gate・commit条件・reviewer選定はSKILL.md手順5に従う。
+  レビュー・commit条件・reviewer選定はSKILL.md手順5に従う。
   終了時は、inboxへ終了指示を書いてユーザーに促してもらい、outboxの完了報告を検証してから
   SKILL.md手順6の解散へ進む。pairファイル(inbox/outbox)は記録として残し、削除しない。
 
@@ -75,7 +75,7 @@ git commitの対象にもしない(`_ai/` がgit管理下のrepositoryでは対�
 ## 省トークン規約
 
 - 通常のやり取りはinbox/outboxの要点だけを読む。
-- rolloutの全読は監査時に限定する: 開始宣言の裏取り、gate 3前の判断過程確認、報告と実物の
+- rolloutの全読は監査時に限定する: 開始宣言の裏取り、実装レビュー前の判断過程確認、報告と実物の
   食い違い・疑義の発生時。読むときもgrep等で該当範囲へ絞る。
 
 ## 停止条件(SKILL.md共通分に加えて)

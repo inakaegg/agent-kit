@@ -2,7 +2,7 @@
 name: debug-loop
 description: >-
   Use when a bug's cause is not obvious or a first fix did not stick: regressions, flaky failures,
-  async・state・distributed issues, same-shape defect clusters. Japanese cues: 「原因不明のbug」「回帰」「flaky」「分散」「1回で直らない」.
+  async・state・distributed issues, same-shape defect clusters. Japanese cues: 「原因不明のbug」「デグレ」「リグレッション」「flaky」「分散」「1回で直らない」.
 ---
 
 # Debug Loop
@@ -13,7 +13,7 @@ description: >-
 
 - 原因が明白でないbug、regression、flaky failure
 - 非同期、retry、cache、lifecycle、複数environment、分散処理が関係する
-- 同型のtest failureまたはreview findingが2件以上ある
+- 同型のtest failureまたはreviewの指摘が2件以上ある
 - 1回目の修正で直らない、または別の症状へ移った
 - error messageと実際に失敗した層が一致しているか不明
 
@@ -41,7 +41,7 @@ description: >-
 ## 証拠
 - log / stack trace:
 - failing test:
-- artifact:
+- 成果物:
 
 ## 未確認
 - ...
@@ -56,7 +56,7 @@ description: >-
 1. 最小のfailing unit test
 2. 固定fixtureによるintegration test
 3. 再現script
-4. manual procedureとlog/artifact
+4. manual procedureとlog/成果物
 
 - 変更前にfailureを確認する。
 - 外部API、clock、random、filesystem、process、networkは可能な限り注入・fake化する。
@@ -125,7 +125,7 @@ regressionの可能性がある場合：
 ## 7. 修正
 
 - failureを生む不変条件の破れを修正する。
-- 可能なら回帰testを先に失敗させる。
+- 可能ならリグレッションテストを先に失敗させる。
 - 正常だった隣接caseを守るtestも必要に応じて追加する。
 - retryやfallbackを追加する場合、failureを隠さず、発火条件、上限、観測方法を定義する。
 - debug log・一時assert・fixture改変の残骸を除く。
@@ -136,15 +136,15 @@ regressionの可能性がある場合：
 2. 旧実装またはmutated implementationでregression testが実際にfailすることを確認できるなら確認する
 3. 同じbug familyのmatrixを再確認する
 4. targeted test
-5. projectのfull gate
-6. 実artifactまたはmanual smoke
+5. projectの必須検査の全体実行
+6. 実成果物またはmanual smoke
 7. final diff review
 
 ## 停止条件
 
 - 大きな方針転換3回
 - 2attempt連続で予測signalも新情報も得られない
-- baseline failureで比較不能
+- 変更前から失敗していて比較不能
 - 未許可のmigration、破壊的変更、課金、security判断が必要
 - product requirement自体が矛盾または未決定
 

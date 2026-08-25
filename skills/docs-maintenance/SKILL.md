@@ -60,7 +60,7 @@ action：keep / update / merge / split / redirect / delete / internalize。
 - duplicate source of truth
 - stale future/past wording
 - 日本語の人間向け文書：textlintの指摘を解消する（編集時hook・pre-commitが自動で指摘する環境では、その指摘に従う）
-- 公開・提出する人間向け文書：`assets/DOCS_REVIEW_PROMPT.md` によるfresh contextの読みやすさレビュー（reviewerの資格条件は同ファイル冒頭の指定に従う。round 2既定、`VERDICT: LGTM` まで）。round 2で新たに目的不達のblockingが出た場合は、解消確認を1round追加できる。
+- 公開・提出する人間向け文書：`assets/DOCS_REVIEW_PROMPT.md` による、履歴を共有しない別セッションの読みやすさレビュー（reviewerの資格条件は同ファイル冒頭の指定に従う。2回既定、`VERDICT: LGTM` まで）。2回目で新たに目的不達の修正必須が出た場合は、解消確認を1回追加できる。
 
 新しく考えた仕様を、その同じcontextで過度に厳密なdocument testへ固定しない。fresh review後に、stableな意味だけをlint/CIで検査する。
 

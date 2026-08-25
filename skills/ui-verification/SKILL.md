@@ -73,17 +73,17 @@ projectに該当しない軸は除外してよいが、除外理由を示す。
 ```text
 render
 → screenshotまたは画面を直接確認
-→ blocking defectを列挙
+→ 修正必須のdefectを列挙
 → 最小修正
 → 再render
 → interaction確認
-→ targeted/full gate
+→ 対象検査と必須検査の全体実行
 ```
 
 source、DOM dimension、build成功だけでvisual合格としない。
 Webのinteraction変更は、screenshot取得だけで終了せず、変更した操作列を自動操作して結果をassertする。
 
-## 6. blocking defect
+## 6. 修正必須のdefect
 
 - clip、overlap、意図しないhorizontal scroll
 - 同格controlの不整合

@@ -25,8 +25,8 @@ description: >-
 
 - 利用者・製品・運用の何が改善するか
 - input件数と対象範囲
-- output artifact
-- baselineと最小構成
+- outputの成果物
+- 変更前の基準測定と最小構成
 - quality metric
 - 形式品質 / 意味妥当性 / 製品価値の別metric
 - 1件・1batch・全体のtime/token/cost/storage概算
@@ -59,7 +59,7 @@ corpus、評価基盤、migration script等の中間成果物を、製品成果�
 
 - 成功・失敗・要review件数
 - quality metric
-- representative artifact
+- 代表的な成果物
 - time/token/cost/resource
 - false positive/negativeまたはregression
 - 次段階へ進む根拠
@@ -78,7 +78,7 @@ corpus、評価基盤、migration script等の中間成果物を、製品成果�
 - completed / failed / skipped:
 - metrics:
 - cost/resource:
-- artifacts/logs:
+- 成果物/logs:
 - decision: continue / revise / stop
 ```
 
@@ -104,4 +104,4 @@ corpus、評価基盤、migration script等の中間成果物を、製品成果�
 - external contract・license・privacy問題が判明
 - 人間の意味判断なしに品質を確定できない
 
-停止時は残件を続行せず、観測事実、費用、artifact、代案、安全な再開点を報告する。
+停止時は残件を続行せず、観測事実、費用、成果物、代案、安全な再開点を報告する。

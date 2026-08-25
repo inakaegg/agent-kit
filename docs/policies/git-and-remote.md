@@ -15,9 +15,9 @@
 実装・変更を明示されたtaskでは、次をすべて満たす場合だけlocal commitしてよい。
 
 1. 許可されたtaskの差分だけである
-2. 変更種別に必要な実行可能gateが成功している
+2. 変更種別に必要な検査が成功している
 3. 1commit 1目的で説明できる
-4. secret、大容量artifact、debug残骸、個人絶対pathを含まない
+4. secret、大容量の生成物、debug残骸、個人絶対pathを含まない
 5. final diffを確認した
 
 追加規則：
@@ -41,9 +41,9 @@
 
 ## 4. review対応
 
-- すべてのactionable findingを確認し、`修正 / 非blockingとして記録 / 誤検知として反証`へ分類する。
+- 対応が必要なすべての指摘を確認し、`修正 / 記録のみ / 誤検知として反証`へ分類する。
 - bot同士が矛盾しても、両方を機械的に満足させない。code、spec、test、実挙動から正しい判断を選ぶ。
-- 修正した場合はlocal gateを再実行し、必要なpush権限の範囲内で更新する。
+- 修正した場合はlocalの検査を再実行し、必要なpush権限の範囲内で更新する。
 - latest headへのreview結果、required CI、未解決threadを確認する。silence、rate limit、processing中reaction、経過時間をapproval扱いしない。
 - `$pr-review-loop` のiteration上限とstate記録に従う。
 
@@ -71,5 +71,5 @@ project方針がない場合：
 - 初回pushでresourceが自動作成されるregistryでは、存在、namespace、default privacyを事前確認する。
 - source、container image、release artifact、package、deploy先は別々にvisibilityを確認する。
 - 作成、visibility変更、初回push後は、実際の公開範囲をAPIまたは管理画面で再確認し、報告する。
-- public化または初回のpublic pushの前に、次の2つを済ませて記録を残す（`_ai/reviews/` 等）。人間向け文書（README等）の読みやすさレビュー（`$docs-maintenance` のgate）で `VERDICT: LGTM` を得ること。READMEの手順のうち、ローカルで完結し副作用のない部分（インストール、起動、dry-run）を書いたとおりに実行して確かめること。
+- public化または初回のpublic pushの前に、次の2つを済ませて記録を残す（現在taskの `reviews/` 等）。人間向け文書（README等）の読みやすさレビュー（`$docs-maintenance`）で `VERDICT: LGTM` を得ること。READMEの手順のうち、ローカルで完結し副作用のない部分（インストール、起動、dry-run）を書いたとおりに実行して確かめること。
 - デプロイ、課金、公開を伴う手順は実行して確かめない。dry-runやplanがあればそれで代え、無ければ「未実行」と完了報告に明記する。
