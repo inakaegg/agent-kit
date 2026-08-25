@@ -32,7 +32,8 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 │   └── policies/
 │       └── git-and-remote.md
 ├── git-hooks/
-│   ├── pre-commit           # checks secrets, environment-dependent paths, Japanese lint at commit time
+│   ├── commit-msg           # enforces the "English / Japanese" subject-line order
+│   ├── pre-commit           # checks branch, secrets, environment-dependent paths, Japanese lint, doc links at commit time
 │   └── pre-push             # scans for secrets with gitleaks before push (full history on first push)
 ├── skills/                  # each skill has SKILL.md and agents/openai.yaml
 │   ├── architecture-diagram/ # + assets/diagram_template.py, references/pitfalls.md
@@ -55,9 +56,12 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 ├── scripts/
 │   ├── agent-check.example.sh
 │   ├── agent-check.sh       # the kit's own checks (validate-kit + tests), run by pre-push and CI
+│   ├── git-guard-hook.py    # Claude Code: blocks --no-verify and git add . in agent commands
 │   ├── textlint-hook.py     # Claude Code: instant lint right after a .md edit
 │   └── validate-kit.py
 └── tests/
+    ├── test_commit_guards.py
+    ├── test_git_guard_hook.py
     ├── test_pre_push_hook.py
     ├── test_public_bundle.py
     └── test_textlint_hook.py
@@ -128,6 +132,7 @@ git config --global core.hooksPath \
 If `core.hooksPath` already points to your own hooks directory, do not overwrite it. Either merge the kit's hooks into that directory, or choose which to use per repository with `git config --local core.hooksPath`. Repositories with plain `.git/hooks/` need nothing: the kit's hooks delegate to them after their own checks. To remove the kit, run `git config --global --unset core.hooksPath` **before** deleting the directory — deleting first leaves every repository silently running no hooks.
 
 - `pre-commit` first rejects commits on a detached HEAD, so a commit never lands on an unintended history line just because nobody checked the current branch (the mechanical form of the "check the branch before committing" rule). Rebase and `git am` runs are exempt. To allow detached-HEAD commits in one repository, set `git config --local hooks.allowDetachedHead true`.
+- `pre-commit` also rejects non-document commits on `main` / `master`: when the staged files include anything other than `.md`, the commit stops with a pointer to the task-branch rule (behavior changes go on a task branch and worktree; document-only commits stay allowed on main). Concluding a merge (`MERGE_HEAD` present) is exempt, since merges into main are an explicitly approved operation. To opt a repository out where committing straight to main is the norm, set `git config --local hooks.allowMainCommits true`.
 - `pre-commit` then scans the staged content with gitleaks and rejects the commit when it finds likely secrets. gitleaks is required: without it installed the commit itself is stopped (`brew install gitleaks`; suppress false positives via `.gitleaksignore`).
 - `pre-commit` rejects commits whose staged diff adds environment-dependent absolute paths (under the home directory or on external volumes).
 - `pre-commit` then checks staged `.md` files with [textlint](https://textlint.org/), a Japanese technical-writing linter. It is on by default in every repository. A config at the repository root (`.textlintrc.json` etc.) takes precedence. Otherwise the kit's bundled `.textlintrc.json` (sentence length, redundant phrasing, kanji runs) and `prh.yaml` (terminology dictionary) apply. To opt a repository out, set `git config --local hooks.skipTextlint true`. Auto-fixable findings (terminology, number style) are applied to the working tree, but the commit still stops once. Machine fixes can overshoot, so a human reviews the diff, re-stages, and commits again.
@@ -172,6 +177,30 @@ In Claude Code, textlint can run right after an agent edits or creates a `.md` f
 This registration is a manual step each user performs, like the `npm install` above. Commands that run automatically belong in settings a human writes for themselves, so this is not delegated to agents. Claude Code also does not auto-approve an agent writing this setting.
 
 Codex has no equivalent hook mechanism; the Codex side is covered by pre-commit and the `$docs-maintenance` procedure.
+
+### Agent git guard (Claude Code)
+
+Two rules in `AGENTS.md` have no enforcement point on the git side: the ban on `--no-verify` (a hook cannot prevent its own bypass) and the ban on `git add .` / `-A` / `--all` (git has no hook for staging). `scripts/git-guard-hook.py` closes both for Claude Code by inspecting each Bash command the agent is about to run and blocking the forbidden forms before they execute. It binds only the agent's tool calls; a human typing the same commands in a terminal is unaffected. Register it in `~/.claude/settings.json` (the same manual-registration principle as above applies):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/agent-kit/scripts/git-guard-hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codex has no equivalent pre-execution hook; on the Codex side these two rules remain document-enforced (`AGENTS.md` §5 / §8).
 
 ### Personal environment policy
 

@@ -51,7 +51,8 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── policies/
 │       └── git-and-remote.md
 ├── git-hooks/
-│   ├── pre-commit           # 秘密情報・環境依存絶対パス・日本語lintをcommit時に検査
+│   ├── commit-msg           # 件名の「英語 / 日本語」順を強制
+│   ├── pre-commit           # branch・秘密情報・環境依存絶対パス・日本語lint・文書リンクをcommit時に検査
 │   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
 ├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
 │   ├── architecture-diagram/ # + assets/diagram_template.py、references/pitfalls.md
@@ -74,9 +75,12 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 ├── scripts/
 │   ├── agent-check.example.sh
 │   ├── agent-check.sh       # kit自身の検査（validate-kit＋tests）。pre-pushとCIが実行
+│   ├── git-guard-hook.py    # Claude Code用: --no-verifyとgit add .をエージェントのコマンドから遮断
 │   ├── textlint-hook.py     # Claude Code用: .md編集直後の即時lint
 │   └── validate-kit.py
 └── tests/
+    ├── test_commit_guards.py
+    ├── test_git_guard_hook.py
     ├── test_pre_push_hook.py
     ├── test_public_bundle.py
     └── test_textlint_hook.py
@@ -165,7 +169,16 @@ kitを除去するときは、ディレクトリを削除する**前に**
 `git config --global --unset core.hooksPath` を実行してください。先に削除すると、
 全リポジトリでhookが黙って動かなくなります。
 
-- `pre-commit` は、まずstageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
+- `pre-commit` は、まずdetached HEADでのcommitを拒否します。branchを確認しないまま
+  commitして意図しない履歴系列へ載せる事故を防ぐためです（「commit前にbranch確認」の
+  規則の機械化）。rebase・`git am` の実行中は対象外です。意図的に許可するリポジトリでは
+  `git config --local hooks.allowDetachedHead true` を設定します。
+- `pre-commit` は、`main`（`master`）上での文書以外のcommitも拒否します。stagedに
+  `.md` 以外が含まれる場合、task branchとworktreeで作業する規則（挙動変更はbranchで、
+  文書のみのcommitはmain可）を案内して停止します。mergeの仕上げ（`MERGE_HEAD` あり）は
+  明示許可済みの操作なので対象外です。main直接commitが慣行のリポジトリでは
+  `git config --local hooks.allowMainCommits true` を設定します。
+- `pre-commit` は続けて、stageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
   commitを拒否します。gitleaksは導入必須で、未導入の環境ではcommit自体を停止します
   （`brew install gitleaks` で導入。誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。
 - `pre-commit` は、環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
@@ -191,6 +204,16 @@ kitを除去するときは、ディレクトリを削除する**前に**
     textlint-rule-prh textlint-filter-rule-comments
   ```
 
+- `pre-commit` は、stageされた `.md` の相対リンクの参照先が存在するかも検査し、
+  存在しないリンクがあればcommitを拒否します。LLMを呼ばない決定論的なファイル存在
+  チェック（数ms）で、外部URL・ページ内アンカー・絶対パス・コードフェンス内は対象外です。
+  perl未導入の環境では省略します。検査しないリポジトリでは
+  `git config --local hooks.skipLinkCheck true` を設定します。
+- `commit-msg` は、件名の言語順を検査します。件名に日本語を含む場合は
+  「英語の要約 / 日本語の要約」の1行（`docs/policies/git-and-remote.md`）でなければ
+  拒否します。英語のみの件名は検査せず、Merge・Revert・fixupの件名、rebase・
+  cherry-pickが再生するメッセージも対象外です。検査しないリポジトリでは
+  `git config --local hooks.skipSubjectLang true` を設定します。
 - `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
   秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
   pushを通します（`brew install gitleaks` で有効化）。
@@ -232,6 +255,36 @@ Claude Codeでは、エージェントが `.md` を編集・作成した直後�
 
 Codexには同等のhook機構がないため、Codex側はcommit時のpre-commitと
 `$docs-maintenance` の手順でカバーします。
+
+### エージェントのgitコマンドガード（Claude Code）
+
+`AGENTS.md` の規則のうち2つは、git側に強制できる地点がありません。`--no-verify` の
+禁止（hookは自分自身の回避を防げない）と、`git add .` / `-A` / `--all` の禁止
+（addにはhookがない）です。`scripts/git-guard-hook.py` は、エージェントが実行しようと
+するBashコマンドを実行前に検査し、この2つの禁止形を遮断します。効くのはエージェントの
+ツール呼び出しだけで、人間がターミナルで打つ同じコマンドには影響しません。
+`~/.claude/settings.json` へ登録します（登録が手作業である理由は前節と同じです）。
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/agent-kit/scripts/git-guard-hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codexには実行前hookの機構がないため、Codex側のこの2規則は文書（`AGENTS.md`
+§5・§8）のままです。
 
 ### 個人環境ポリシー
 
