@@ -1,0 +1,66 @@
+#!/bin/sh
+# commit件名の言語順を検査するグローバル commit-msg hook。
+# 件名に日本語を含む場合、「英語の要約 / 日本語の要約」の順
+# （docs/policies/git-and-remote.md）でなければcommitを拒否する。
+# 日本語を含まない件名は検査しない（repository固有の英語規約を妨げない）。
+#
+# 適用: git config --global core.hooksPath <このディレクトリ>
+# リポジトリ単位で意図的に無効化する場合:
+#   git config --local hooks.skipSubjectLang true
+# このhookが拒否したcommitを --no-verify で通さないこと（共通AGENTS.md §5）。
+
+set -u
+
+msg_file="$1"
+
+# リポジトリ固有の .git/hooks/commit-msg があれば最後に委譲する。
+# --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
+run_local_hook() {
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  local_hook="$git_dir/hooks/commit-msg"
+  self="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
+  if [ -n "$git_dir" ] && [ -x "$local_hook" ]; then
+    local_real="$(cd "$(dirname "$local_hook")" 2>/dev/null && pwd -P)/commit-msg"
+    if [ "$local_real" != "$self" ]; then
+      exec "$local_hook" "$@"
+    fi
+  fi
+  exit 0
+}
+
+check_subject_lang() {
+  if [ "$(git config --type=bool --default=false hooks.skipSubjectLang)" = "true" ]; then
+    return 0
+  fi
+  # rebase・cherry-pick・merge進行中は既存メッセージの再生なので検査しない。
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  for marker in rebase-merge rebase-apply MERGE_MSG CHERRY_PICK_HEAD; do
+    [ -e "$git_dir/$marker" ] && return 0
+  done
+  # 件名 = コメント行を除いた最初の行。
+  subject="$(grep -v '^#' "$msg_file" | sed -n '1p')"
+  [ -n "$subject" ] || return 0
+  case "$subject" in
+    Merge\ *|Revert\ *|fixup!*|squash!*|amend!*) return 0 ;;
+  esac
+  # 日本語判定はperlで行う（textlint層と同じ文字範囲）。perlが無ければ検査を省略する（fail-open）。
+  command -v perl >/dev/null 2>&1 || return 0
+  jp_re='[\x{3005}\x{3040}-\x{309f}\x{30a0}-\x{30ff}\x{3400}-\x{4dbf}\x{4e00}-\x{9fff}\x{ff01}-\x{ff5e}\x{ff66}-\x{ff9f}\x{3001}-\x{3015}]'
+  printf '%s' "$subject" | perl -CSD -ne "exit(/$jp_re/ ? 0 : 1)" || return 0
+  # 日本語を含む件名は「ASCII英文 + ' / ' + 日本語を含む残り」の形だけ通す。
+  if printf '%s' "$subject" | perl -CSD -ne "exit(m{^[ -~]+ / .*$jp_re} ? 0 : 1)"; then
+    return 0
+  fi
+  {
+    echo "commit-msg: 件名の言語順が規則と異なるためcommitを中止しました。"
+    echo "  件名: $subject"
+    echo "  - 「英語の要約 / 日本語の要約」の順の1行にする（docs/policies/git-and-remote.md）"
+    echo "  - 英語規約のリポジトリでは日本語を件名に入れない"
+    echo "  - このリポジトリで意図的に無効化する場合: git config --local hooks.skipSubjectLang true"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+}
+
+check_subject_lang
+run_local_hook "$@"

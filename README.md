@@ -117,7 +117,8 @@ These hooks are standard Git machinery, not an agent-only feature. They are in t
 git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
 
-- `pre-commit` first scans the staged content with gitleaks and rejects the commit when it finds likely secrets. gitleaks is required: without it installed the commit itself is stopped (`brew install gitleaks`; suppress false positives via `.gitleaksignore`).
+- `pre-commit` first rejects commits on a detached HEAD, so a commit never lands on an unintended history line just because nobody checked the current branch (the mechanical form of the "check the branch before committing" rule). Rebase and `git am` runs are exempt. To allow detached-HEAD commits in one repository, set `git config --local hooks.allowDetachedHead true`.
+- `pre-commit` then scans the staged content with gitleaks and rejects the commit when it finds likely secrets. gitleaks is required: without it installed the commit itself is stopped (`brew install gitleaks`; suppress false positives via `.gitleaksignore`).
 - `pre-commit` rejects commits whose staged diff adds environment-dependent absolute paths (under the home directory or on external volumes).
 - `pre-commit` then checks staged `.md` files with [textlint](https://textlint.org/), a Japanese technical-writing linter. It is on by default in every repository. A config at the repository root (`.textlintrc.json` etc.) takes precedence. Otherwise the kit's bundled `.textlintrc.json` (sentence length, redundant phrasing, kanji runs) and `prh.yaml` (terminology dictionary) apply. To opt a repository out, set `git config --local hooks.skipTextlint true`. Auto-fixable findings (terminology, number style) are applied to the working tree, but the commit still stops once. Machine fixes can overshoot, so a human reviews the diff, re-stages, and commits again.
 <!-- textlint-disable prh -->（悪い例の引用のため、この区間だけ用語辞書の検査を除外 / prh is disabled for this quoted-example passage）
@@ -130,6 +131,7 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
     textlint-rule-prh textlint-filter-rule-comments
   ```
 
+- `commit-msg` checks the subject line's language order. When the subject contains Japanese, it must be a one-liner in the form "English summary / Japanese summary" (`docs/policies/git-and-remote.md`); English-only subjects are not checked, and neither are merge / revert / fixup subjects or messages replayed by rebase or cherry-pick. To opt a repository out, set `git config --local hooks.skipSubjectLang true`.
 - `pre-push` scans the pushed commit range with gitleaks (all reachable history on the first push) and rejects the push when it finds likely secrets. Without gitleaks installed it only warns and lets the push through (`brew install gitleaks` to enable).
 - `pre-push` then runs `scripts/agent-check.sh fast` and rejects the push when it fails. This is opt-in per repository: `git config --local hooks.runAgentCheck true`. The script collects the project's verification commands (see `templates/VERIFICATION.md`). Opt-in is deliberate: this hook applies to every repository on the machine. A script inside a cloned third-party repository must not run just because you pushed.
 - When a repository has its own `.git/hooks/`, the shared hooks delegate to it after their own checks. Repositories that intentionally allow absolute paths set `git config --local hooks.allowLocalPaths true`.

@@ -1,0 +1,112 @@
+import os
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+KIT_ROOT = Path(__file__).resolve().parents[1]
+COMMIT_MSG_HOOK = KIT_ROOT / "git-hooks" / "commit-msg"
+PRE_COMMIT_HOOK = KIT_ROOT / "git-hooks" / "pre-commit"
+
+
+def clean_env() -> dict:
+    env = dict(os.environ)
+    env["GIT_CONFIG_GLOBAL"] = "/dev/null"
+    env["GIT_CONFIG_SYSTEM"] = "/dev/null"
+    return env
+
+
+def make_repo(case: unittest.TestCase) -> Path:
+    d = Path(tempfile.mkdtemp())
+    case.addCleanup(shutil.rmtree, d, True)
+    subprocess.run(["git", "-C", str(d), "init", "-q"], check=True, env=clean_env())
+    return d
+
+
+def run_commit_msg(repo: Path, subject: str) -> int:
+    msg = repo / "msg.txt"
+    msg.write_text(subject + "\n", encoding="utf-8")
+    result = subprocess.run(
+        ["sh", str(COMMIT_MSG_HOOK), str(msg)],
+        cwd=repo, capture_output=True, text=True, env=clean_env(),
+    )
+    return result.returncode
+
+
+class CommitMsgSubjectLangTests(unittest.TestCase):
+    def test_english_then_japanese_passes(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 0)
+
+    def test_japanese_first_is_rejected(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 1)
+
+    def test_japanese_without_slash_is_rejected(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, "Fix: 説明を修正"), 1)
+
+    def test_english_only_passes(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
+
+    def test_merge_subject_is_exempt(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, "Merge branch 'feature/日本語'"), 0)
+
+    def test_opt_out_config_skips_check(self):
+        repo = make_repo(self)
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "--local", "hooks.skipSubjectLang", "true"],
+            check=True, env=clean_env(),
+        )
+        self.assertEqual(run_commit_msg(repo, "日本語だけの件名"), 0)
+
+
+class PreCommitBranchGuardTests(unittest.TestCase):
+    # pre-commit全体（gitleaks等）を通すと環境依存になるため、
+    # hookをそのままcommit経由では走らせず、guard部分の挙動をdetach状態の
+    # git commit 実行で確認する。gitleaks・textlintが無い環境でも
+    # branch guardは最初に走り、detachedなら他の検査より先に止まる。
+    def _repo_with_commit(self) -> Path:
+        repo = make_repo(self)
+        env = clean_env()
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@example.invalid"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "core.hooksPath", str(PRE_COMMIT_HOOK.parent)], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "hooks.skipTextlint", "true"], check=True, env=env)
+        (repo / "f.txt").write_text("a\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "Initial commit"], check=True, env=env)
+        return repo
+
+    def _commit(self, repo: Path, message: str) -> int:
+        env = clean_env()
+        (repo / "f.txt").open("a", encoding="utf-8").write("b\n")
+        subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True, env=env)
+        result = subprocess.run(
+            ["git", "-C", str(repo), "commit", "-q", "-m", message],
+            capture_output=True, text=True, env=env,
+        )
+        return result.returncode
+
+    def test_commit_on_branch_passes(self):
+        repo = self._repo_with_commit()
+        self.assertEqual(self._commit(repo, "On branch / branch上のcommit"), 0)
+
+    def test_commit_on_detached_head_is_rejected(self):
+        repo = self._repo_with_commit()
+        subprocess.run(["git", "-C", str(repo), "checkout", "-q", "--detach", "HEAD"], check=True, env=clean_env())
+        self.assertNotEqual(self._commit(repo, "Detached / 分離状態"), 0)
+
+    def test_detached_head_allowed_by_config(self):
+        repo = self._repo_with_commit()
+        env = clean_env()
+        subprocess.run(["git", "-C", str(repo), "checkout", "-q", "--detach", "HEAD"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "--local", "hooks.allowDetachedHead", "true"], check=True, env=env)
+        self.assertEqual(self._commit(repo, "Detached allowed / 許可済み"), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
