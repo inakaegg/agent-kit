@@ -76,6 +76,8 @@ class PreCommitBranchGuardTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, env=env)
         subprocess.run(["git", "-C", str(repo), "config", "core.hooksPath", str(PRE_COMMIT_HOOK.parent)], check=True, env=env)
         subprocess.run(["git", "-C", str(repo), "config", "hooks.skipTextlint", "true"], check=True, env=env)
+        # main guard（mainでの非文書commit拒否）を避け、branch guard自体の挙動だけを見る
+        subprocess.run(["git", "-C", str(repo), "checkout", "-q", "-b", "work"], check=True, env=env)
         (repo / "f.txt").write_text("a\n", encoding="utf-8")
         subprocess.run(["git", "-C", str(repo), "add", "f.txt"], check=True, env=env)
         subprocess.run(["git", "-C", str(repo), "commit", "-q", "-m", "Initial commit"], check=True, env=env)
@@ -106,6 +108,48 @@ class PreCommitBranchGuardTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(repo), "checkout", "-q", "--detach", "HEAD"], check=True, env=env)
         subprocess.run(["git", "-C", str(repo), "config", "--local", "hooks.allowDetachedHead", "true"], check=True, env=env)
         self.assertEqual(self._commit(repo, "Detached allowed / 許可済み"), 0)
+
+
+class PreCommitMainGuardTests(unittest.TestCase):
+    def _repo(self, branch: str) -> Path:
+        repo = make_repo(self)
+        env = clean_env()
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@example.invalid"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "core.hooksPath", str(PRE_COMMIT_HOOK.parent)], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "hooks.skipTextlint", "true"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "checkout", "-q", "-b", branch], check=True, env=env)
+        return repo
+
+    def _commit_file(self, repo: Path, name: str) -> int:
+        env = clean_env()
+        (repo / name).write_text("x\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", name], check=True, env=env)
+        result = subprocess.run(
+            ["git", "-C", str(repo), "commit", "-q", "-m", "Add file / ファイルを追加"],
+            capture_output=True, text=True, env=env,
+        )
+        return result.returncode
+
+    def test_code_on_main_is_rejected(self):
+        repo = self._repo("main")
+        self.assertNotEqual(self._commit_file(repo, "app.py"), 0)
+
+    def test_docs_only_on_main_passes(self):
+        repo = self._repo("main")
+        self.assertEqual(self._commit_file(repo, "note.md"), 0)
+
+    def test_code_on_feature_branch_passes(self):
+        repo = self._repo("feat/x")
+        self.assertEqual(self._commit_file(repo, "app.py"), 0)
+
+    def test_opt_out_config_allows_code_on_main(self):
+        repo = self._repo("main")
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "--local", "hooks.allowMainCommits", "true"],
+            check=True, env=clean_env(),
+        )
+        self.assertEqual(self._commit_file(repo, "app.py"), 0)
 
 
 class PreCommitLinkCheckTests(unittest.TestCase):

@@ -181,6 +181,33 @@ run_branch_guard() {
   exit 1
 }
 
+# main（master）のcheckoutでの挙動変更commitを止める。stagedがすべて.mdの
+# 文書のみcommitは通す（共通AGENTS.md §8「挙動変更はtask branch＋worktreeで、
+# 軽微な文書更新のみmain可」の機械化）。mergeの仕上げcommit（MERGE_HEADあり）は
+# 明示許可済みのmerge操作なので対象外。main直接commitが慣行のリポジトリは
+# git config --local hooks.allowMainCommits true でopt-outする。
+run_main_guard() {
+  if [ "$(git config --type=bool --default=false hooks.allowMainCommits)" = "true" ]; then
+    return 0
+  fi
+  branch="$(git symbolic-ref --short -q HEAD)" || return 0
+  case "$branch" in main|master) ;; *) return 0 ;; esac
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  [ -e "$git_dir/MERGE_HEAD" ] && return 0
+  nondoc="$(git diff --cached --name-only | grep -v '\.md$' || true)"
+  [ -z "$nondoc" ] && return 0
+  {
+    echo "pre-commit: ${branch} 上での文書以外の変更commitを中止しました。"
+    echo "対象:"
+    printf '%s\n' "$nondoc" | sed 's/^/  - /'
+    echo "対応:"
+    echo "  - task専用branchとworktreeを作ってからcommitする（共通AGENTS.md §8）"
+    echo "  - main直接commitが慣行のリポジトリでは: git config --local hooks.allowMainCommits true"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+}
+
 # 秘密情報の走査（gitleaks）。stageされた内容を対象にcommit前へ蓋をする。
 # pre-pushの全履歴走査より早い段階で止めるための層。gitleaksは導入必須とし、
 # 未導入の環境ではcommitを停止する（黙って素通りさせない）。誤検知は
@@ -205,6 +232,7 @@ run_gitleaks() {
 }
 
 run_branch_guard
+run_main_guard
 run_gitleaks
 run_textlint
 run_linkcheck
