@@ -117,7 +117,7 @@ These hooks are standard Git machinery, not an agent-only feature. They are in t
 git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
 
-- `pre-commit` first scans the staged content with gitleaks and rejects the commit when it finds likely secrets. Without gitleaks installed it only warns and lets the commit through (same as pre-push; suppress false positives via `.gitleaksignore`).
+- `pre-commit` first scans the staged content with gitleaks and rejects the commit when it finds likely secrets. gitleaks is required: without it installed the commit itself is stopped (`brew install gitleaks`; suppress false positives via `.gitleaksignore`).
 - `pre-commit` rejects commits whose staged diff adds environment-dependent absolute paths (under the home directory or on external volumes).
 - `pre-commit` then checks staged `.md` files with [textlint](https://textlint.org/), a Japanese technical-writing linter. It is on by default in every repository. A config at the repository root (`.textlintrc.json` etc.) takes precedence. Otherwise the kit's bundled `.textlintrc.json` (sentence length, redundant phrasing, kanji runs) and `prh.yaml` (terminology dictionary) apply. To opt a repository out, set `git config --local hooks.skipTextlint true`. Auto-fixable findings (terminology, number style) are applied to the working tree, but the commit still stops once. Machine fixes can overshoot, so a human reviews the diff, re-stages, and commits again.
 <!-- textlint-disable prh -->（悪い例の引用のため、この区間だけ用語辞書の検査を除外 / prh is disabled for this quoted-example passage）

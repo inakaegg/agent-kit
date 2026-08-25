@@ -144,8 +144,8 @@ git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
 
 - `pre-commit` は、まずstageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
-  commitを拒否します。gitleaks未導入の環境では警告だけ出して通します（pre-pushと同じ扱い。
-  誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。
+  commitを拒否します。gitleaksは導入必須で、未導入の環境ではcommit自体を停止します
+  （`brew install gitleaks` で導入。誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。
 - `pre-commit` は、環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
   staged diffの追加行へ混入したcommitを拒否します。
 - `pre-commit` は続けて、staged対象の `.md` を [textlint](https://textlint.org/)
