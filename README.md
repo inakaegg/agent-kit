@@ -116,11 +116,14 @@ The two-seat setup (`$pair-watch`) is not under `skills/`, so the symlinks above
 
 ### Git hooks
 
-These hooks are standard Git machinery, not an agent-only feature. They are in the kit as the last line of defense that holds agents and humans to the same rules. Set `git-hooks/` as the shared hooks directory via `core.hooksPath`:
+These hooks are standard Git machinery, not an agent-only feature. They are in the kit as the last line of defense that holds agents and humans to the same rules. Set `git-hooks/` as the shared hooks directory via `core.hooksPath`. The command below sets it only when it is not set yet; if it is already set, it prints the current value and changes nothing:
 
 ```bash
-git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+git config --global core.hooksPath \
+  || git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
+
+If `core.hooksPath` already points to your own hooks directory, do not overwrite it. Either merge the kit's hooks into that directory, or choose which to use per repository with `git config --local core.hooksPath`. Repositories with plain `.git/hooks/` need nothing: the kit's hooks delegate to them after their own checks. To remove the kit, run `git config --global --unset core.hooksPath` **before** deleting the directory — deleting first leaves every repository silently running no hooks.
 
 - `pre-commit` first rejects commits on a detached HEAD, so a commit never lands on an unintended history line just because nobody checked the current branch (the mechanical form of the "check the branch before committing" rule). Rebase and `git am` runs are exempt. To allow detached-HEAD commits in one repository, set `git config --local hooks.allowDetachedHead true`.
 - `pre-commit` then scans the staged content with gitleaks and rejects the commit when it finds likely secrets. gitleaks is required: without it installed the commit itself is stopped (`brew install gitleaks`; suppress false positives via `.gitleaksignore`).

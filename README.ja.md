@@ -143,10 +143,21 @@ done
 このhookはエージェント専用の機能ではなく、Gitの標準機構です。エージェントにも人間にも
 同じ規約を強制する最終防衛線としてキットに含めています。
 `git-hooks/` を全リポジトリ共通のhook置き場として `core.hooksPath` に設定します。
+次のコマンドは未設定のときだけ設定します。設定済みなら現在値を表示するだけで、
+何も変更しません。
 
 ```bash
-git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+git config --global core.hooksPath \
+  || git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
+
+`core.hooksPath` を既に自分のhookディレクトリへ向けている場合は、上書きしないでください。
+そのディレクトリへkitのhookを統合するか、リポジトリごとに
+`git config --local core.hooksPath` でどちらを使うか選びます。素の `.git/hooks/` を
+使っているリポジトリは対応不要です（kitのhookが自分の検査の後に委譲します）。
+kitを除去するときは、ディレクトリを削除する**前に**
+`git config --global --unset core.hooksPath` を実行してください。先に削除すると、
+全リポジトリでhookが黙って動かなくなります。
 
 - `pre-commit` は、まずstageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
   commitを拒否します。gitleaksは導入必須で、未導入の環境ではcommit自体を停止します
