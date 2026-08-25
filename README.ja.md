@@ -23,7 +23,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
    無人で回さない。ソフトウェア開発の大半は、作っている途中で不明確な点が現れ、
    質問と判断を通じて仕様が固まっていく。だから既定は、自走距離を伸ばしつつ本当の
    判断点でだけ人間へ戻す**監督付き並行体制**とする
-   （実装役＋監視役の2セッション、`skills/pair/`）。
+   （実装役＋監視役の2セッション、[pair-watch](https://github.com/inakaegg/pair-watch) プラグイン）。
 3. **検証は自己申告ではなく証拠で** — 非自明な変更は、実装した本人とは別の文脈の
    レビュアーがgate制で検査する（`skills/independent-review/`）。実行していない
    コマンドを実行済みと報告しない、という規則が全体の土台にある。
@@ -63,7 +63,6 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   ├── evaluation-loop/
 │   ├── independent-review/  # + assets/REVIEW_PROMPT.md
 │   ├── large-work/
-│   ├── pair/                # + assets/役割brief 3種 + references（transport-codex、設計ノート）
 │   ├── pr-review-loop/
 │   ├── semantic-generation/ # + references/referent-before-label.md
 │   ├── ui-quality/          # + references（web、native、audit-rubric）
@@ -87,7 +86,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 各Skillは単独で配置しても参照が壊れないよう、必要なreferenceやassetを
 同じSkill directory内に保持します。
 
-`pair` skillは、英語の独立プラグイン [pair-watch](https://github.com/inakaegg/pair-watch) としても公開しています（Claude Codeのplugin marketplaceから導入可）。
+2チャット体制（実装役＋監視役）のSkillは本kitには含めません。英語の独立プラグイン [pair-watch](https://github.com/inakaegg/pair-watch) が正本です（Claude Codeのplugin marketplaceから導入可）。
 
 ## 導入
 

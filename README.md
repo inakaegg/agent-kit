@@ -10,7 +10,7 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 
 1. **Enforce rules with machines, not documents**. Rules that exist only in a policy document get followed inconsistently. So the policy document stays a thin entry point. The real enforcement is checks that fail when a rule is broken: `scripts/validate-kit.py`, the pre-commit and pre-push hooks in `git-hooks/`, and tests. When written reminders about the same rule keep accumulating, the rule moves into lint / tests / hooks / CI. The placement procedure is `docs/instruction-placement.md`.
 
-2. **Fully autonomous loops are only for closed tasks with machine-checkable success**. Except for work whose "done" can be judged by tests or numbers — bulk migrations, lint sweeps — agents are not run unattended. Most software development surfaces unclear points mid-build, and the spec settles through questions and decisions. So the default is a supervised pair setup: implementer plus watcher across two sessions (`skills/pair/`). Extend the autonomous stretch, but return to a human exactly at the real decision points.
+2. **Fully autonomous loops are only for closed tasks with machine-checkable success**. Except for work whose "done" can be judged by tests or numbers — bulk migrations, lint sweeps — agents are not run unattended. Most software development surfaces unclear points mid-build, and the spec settles through questions and decisions. So the default is a supervised pair setup: implementer plus watcher across two sessions (the [pair-watch](https://github.com/inakaegg/pair-watch) plugin). Extend the autonomous stretch, but return to a human exactly at the real decision points.
 
 3. **Verification means evidence, not self-report**. Non-trivial changes are reviewed through gates by a reviewer whose context is separate from the implementer's (`skills/independent-review/`). The foundation under everything else is one rule: never report a command as executed when it was not.
 
@@ -44,7 +44,6 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 │   ├── evaluation-loop/
 │   ├── independent-review/  # + assets/REVIEW_PROMPT.md
 │   ├── large-work/
-│   ├── pair/                # + assets: 3 role briefs; references (transport-codex, design notes)
 │   ├── pr-review-loop/
 │   ├── semantic-generation/ # + references/referent-before-label.md
 │   ├── ui-quality/          # + references (web, native, audit-rubric)
@@ -67,7 +66,7 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 
 Each skill keeps the references and assets it needs inside its own directory, so nothing breaks when a skill is deployed on its own.
 
-The `pair` skill is also published standalone in English as [pair-watch](https://github.com/inakaegg/pair-watch), installable from its Claude Code plugin marketplace.
+The two-seat setup (implementer plus watcher) is not bundled in this kit; it is published as the standalone [pair-watch](https://github.com/inakaegg/pair-watch) plugin (installable from its Claude Code plugin marketplace). That plugin is the single source for this workflow.
 
 ## Installation
 
