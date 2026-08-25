@@ -111,6 +111,26 @@ TARGETS
   exit 1
 }
 
+# 秘密情報の走査（gitleaks）。stageされた内容を対象にcommit前へ蓋をする。
+# pre-pushの全履歴走査より早い段階で止めるための層。未導入の環境では
+# 警告だけ出して通す（pre-pushと同じfail-open）。誤検知は .gitleaksignore へ
+# fingerprintを追加して抑止する。
+run_gitleaks() {
+  if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: gitleaks未導入のため秘密情報の走査をスキップしました（brew install gitleaks で導入）" >&2
+    return 0
+  fi
+  if ! gitleaks git --pre-commit --staged --no-banner --redact . >&2; then
+    {
+      echo "pre-commit: gitleaksが秘密情報らしき値を検出したためcommitを中止しました。"
+      echo "  - 該当値を除去する。誤検知の場合は .gitleaksignore へfingerprintを追加する"
+      echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+    } >&2
+    exit 1
+  fi
+}
+
+run_gitleaks
 run_textlint
 
 if [ "$(git config --type=bool --default=false hooks.allowLocalPaths)" = "true" ]; then

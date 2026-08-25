@@ -52,7 +52,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │       ├── agent-collaboration.md
 │       └── git-and-remote.md
 ├── git-hooks/
-│   ├── pre-commit           # 環境依存の絶対パス混入をcommit時に拒否
+│   ├── pre-commit           # 秘密情報・環境依存絶対パス・日本語lintをcommit時に検査
 │   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
 ├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
 │   ├── architecture-diagram/ # + assets/diagram_template.py、references/pitfalls.md
@@ -143,6 +143,9 @@ done
 git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
 ```
 
+- `pre-commit` は、まずstageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
+  commitを拒否します。gitleaks未導入の環境では警告だけ出して通します（pre-pushと同じ扱い。
+  誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。
 - `pre-commit` は、環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
   staged diffの追加行へ混入したcommitを拒否します。
 - `pre-commit` は続けて、staged対象の `.md` を [textlint](https://textlint.org/)
