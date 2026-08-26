@@ -152,6 +152,40 @@ class PreCommitMainGuardTests(unittest.TestCase):
         self.assertEqual(self._commit_file(repo, "app.py"), 0)
 
 
+class PreCommitAgentSettingsTests(unittest.TestCase):
+    """agent-settings.env（3層トグル）経由のガード制御。"""
+
+    _repo = PreCommitMainGuardTests.__dict__["_repo"]
+    _commit_file = PreCommitMainGuardTests.__dict__["_commit_file"]
+
+    def test_dotfile_on_main_passes_by_default(self):
+        # kit既定の MAIN_GUARD_EXTRA_DOCS=.* によりdotfileは文書扱い
+        repo = self._repo("main")
+        self.assertEqual(self._commit_file(repo, ".gitignore"), 0)
+
+    def test_repo_settings_disable_main_guard(self):
+        repo = self._repo("main")
+        (repo / "agent-settings.env").write_text("MAIN_DOC_GUARD=false\n", encoding="utf-8")
+        self.assertEqual(self._commit_file(repo, "app.py"), 0)
+
+    def test_repo_settings_override_extra_docs(self):
+        repo = self._repo("main")
+        (repo / "agent-settings.env").write_text("MAIN_GUARD_EXTRA_DOCS=LICENSE\n", encoding="utf-8")
+        self.assertEqual(self._commit_file(repo, "LICENSE"), 0)
+        # 上書きによりkit既定の .* は効かなくなる
+        self.assertNotEqual(self._commit_file(repo, ".gitignore"), 0)
+
+    def test_local_settings_override_repo_settings(self):
+        repo = self._repo("main")
+        (repo / "agent-settings.env").write_text("MAIN_DOC_GUARD=true\n", encoding="utf-8")
+        (repo / "agent-settings.local.env").write_text("MAIN_DOC_GUARD=false\n", encoding="utf-8")
+        self.assertEqual(self._commit_file(repo, "app.py"), 0)
+
+    def test_code_on_main_still_rejected_with_default_settings(self):
+        repo = self._repo("main")
+        self.assertNotEqual(self._commit_file(repo, "app.py"), 0)
+
+
 class PreCommitLinkCheckTests(unittest.TestCase):
     def _repo(self) -> Path:
         repo = make_repo(self)
@@ -202,6 +236,11 @@ class PreCommitLinkCheckTests(unittest.TestCase):
             ["git", "-C", str(repo), "config", "--local", "hooks.skipLinkCheck", "true"],
             check=True, env=clean_env(),
         )
+        self.assertEqual(self._commit_md(repo, "see [gone](../missing.md)\n"), 0)
+
+    def test_settings_file_skips_check(self):
+        repo = self._repo()
+        (repo / "agent-settings.env").write_text("LINKCHECK=false\n", encoding="utf-8")
         self.assertEqual(self._commit_md(repo, "see [gone](../missing.md)\n"), 0)
 
 

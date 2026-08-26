@@ -9,6 +9,24 @@
 
 set -u
 
+# agent-settings（AGENTS.md §13）の3層からキーを解決する。
+# <repo>/agent-settings.local.env → <repo>/agent-settings.env → kit既定 の順で
+# 最初に見つかった値を返し、どこにも無ければ第2引数の既定を返す。
+# 値の書式は KEY=value（引用符なし・1行）。空値も「設定あり」として尊重する。
+setting() {
+  _key="$1"; _default="$2"
+  _top="$(git rev-parse --show-toplevel 2>/dev/null)"
+  _kit="$(cd "$(dirname "$0")/.." && pwd -P)"
+  for _f in "$_top/agent-settings.local.env" "$_top/agent-settings.env" "$_kit/agent-settings.env"; do
+    [ -f "$_f" ] || continue
+    if grep -q "^${_key}=" "$_f" 2>/dev/null; then
+      sed -n "s/^${_key}=//p" "$_f" | tail -n 1
+      return 0
+    fi
+  done
+  printf '%s\n' "$_default"
+}
+
 # リポジトリ固有の .git/hooks/pre-commit があれば最後に委譲する。
 # --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
 run_local_hook() {
@@ -36,6 +54,9 @@ run_local_hook() {
 run_textlint() {
   staged_md="$(git diff --cached --name-only --diff-filter=d -- '*.md')"
   [ -n "$staged_md" ] || return 0
+  if [ "$(setting TEXTLINT true)" = "false" ]; then
+    return 0
+  fi
   if [ "$(git config --type=bool --default=false hooks.skipTextlint)" = "true" ]; then
     return 0
   fi
@@ -117,6 +138,9 @@ TARGETS
 # git config --local hooks.skipLinkCheck true。perlが無い環境では省略する（fail-open）。
 # 検査対象はworking treeの内容で、部分stage時はstage内容と差が出得る（textlintと同じ）。
 run_linkcheck() {
+  if [ "$(setting LINKCHECK true)" = "false" ]; then
+    return 0
+  fi
   if [ "$(git config --type=bool --default=false hooks.skipLinkCheck)" = "true" ]; then
     return 0
   fi
@@ -187,6 +211,9 @@ run_branch_guard() {
 # 明示許可済みのmerge操作なので対象外。main直接commitが慣行のリポジトリは
 # git config --local hooks.allowMainCommits true でopt-outする。
 run_main_guard() {
+  if [ "$(setting MAIN_DOC_GUARD true)" = "false" ]; then
+    return 0
+  fi
   if [ "$(git config --type=bool --default=false hooks.allowMainCommits)" = "true" ]; then
     return 0
   fi
@@ -194,7 +221,16 @@ run_main_guard() {
   case "$branch" in main|master) ;; *) return 0 ;; esac
   git_dir="$(git rev-parse --git-dir 2>/dev/null)"
   [ -e "$git_dir/MERGE_HEAD" ] && return 0
-  nondoc="$(git diff --cached --name-only | grep -v '\.md$' || true)"
+  # 文書扱い = .md に加えて MAIN_GUARD_EXTRA_DOCS のglob（空白区切り。既定はdotfile類）。
+  extra_docs="$(setting MAIN_GUARD_EXTRA_DOCS '.*')"
+  nondoc="$(git diff --cached --name-only | while IFS= read -r f; do
+    case "$f" in (*.md) continue ;; esac
+    matched=false
+    for p in $extra_docs; do
+      case "$f" in ($p) matched=true; break ;; esac
+    done
+    [ "$matched" = "true" ] || printf '%s\n' "$f"
+  done)"
   [ -z "$nondoc" ] && return 0
   {
     echo "pre-commit: ${branch} 上での文書以外の変更commitを中止しました。"
@@ -203,6 +239,7 @@ run_main_guard() {
     echo "対応:"
     echo "  - task専用branchとworktreeを作ってからcommitする（共通AGENTS.md §8）"
     echo "  - main直接commitが慣行のリポジトリでは: git config --local hooks.allowMainCommits true"
+    echo "  - 文書扱いのパターン追加・ガード無効化は agent-settings.env（AGENTS.md §13）"
     echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
   } >&2
   exit 1

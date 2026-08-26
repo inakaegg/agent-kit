@@ -3,3 +3,4 @@ __pycache__/
 .DS_Store
 _ai/
 .worktrees/
+agent-settings.local.env

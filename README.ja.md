@@ -44,6 +44,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 ├── README.md
 ├── README.ja.md
 ├── .textlintrc.json         # 日本語文書lintの規則（pre-commitが参照）
+├── agent-settings.env       # 設定トグルの既定値（AGENTS.md §13）
 ├── prh.yaml                 # 用語辞書（レビュー指摘から育てる）
 ├── docs/
 │   ├── instruction-placement.md
@@ -174,10 +175,13 @@ kitを除去するときは、ディレクトリを削除する**前に**
   規則の機械化）。rebase・`git am` の実行中は対象外です。意図的に許可するリポジトリでは
   `git config --local hooks.allowDetachedHead true` を設定します。
 - `pre-commit` は、`main`（`master`）上での文書以外のcommitも拒否します。stagedに
-  `.md` 以外が含まれる場合、task branchとworktreeで作業する規則（挙動変更はbranchで、
-  文書のみのcommitはmain可）を案内して停止します。mergeの仕上げ（`MERGE_HEAD` あり）は
+  文書以外が含まれる場合、task branchとworktreeで作業する規則（挙動変更はbranchで、
+  文書のみのcommitはmain可）を案内して停止します。「文書」は `.md` に加えて
+  設定 `MAIN_GUARD_EXTRA_DOCS` のglob（既定はdotfile類 `.*`。`.gitignore` 等の
+  repo設定ファイルが通る）です。mergeの仕上げ（`MERGE_HEAD` あり）は
   明示許可済みの操作なので対象外です。main直接commitが慣行のリポジトリでは
-  `git config --local hooks.allowMainCommits true` を設定します。
+  `git config --local hooks.allowMainCommits true` または agent-settings（後述）の
+  `MAIN_DOC_GUARD=false` を設定します。
 - `pre-commit` は続けて、stageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
   commitを拒否します。gitleaksは導入必須で、未導入の環境ではcommit自体を停止します
   （`brew install gitleaks` で導入。誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。
@@ -187,8 +191,8 @@ kitを除去するときは、ディレクトリを削除する**前に**
   （日本語の技術文書lint）で検査します。全リポジトリで既定有効です。リポジトリ直下に
   `.textlintrc.json` 等の設定があればそれを優先し、なければこのkit同梱の
   `.textlintrc.json`（文の長さ、冗長表現、漢字の連続など）と `prh.yaml`（用語辞書）で
-  検査します。検査しないリポジトリでは `git config --local hooks.skipTextlint true` を
-  設定します。指摘のうち自動修正できる分（用語辞書、数字表記など）はworking treeへ
+  検査します。検査しないリポジトリでは `git config --local hooks.skipTextlint true`
+  または agent-settings（後述）の `TEXTLINT=false` を設定します。指摘のうち自動修正できる分（用語辞書、数字表記など）はworking treeへ
   適用しますが、そのままcommitには入れず一度止めます。機械の修正が過剰なことも
   あるため、人間が差分を確認してstageし直してから再commitします。
 <!-- textlint-disable prh -->（悪い例の引用のため、次の1文だけ用語辞書の検査を除外）
@@ -208,7 +212,8 @@ kitを除去するときは、ディレクトリを削除する**前に**
   存在しないリンクがあればcommitを拒否します。LLMを呼ばない決定論的なファイル存在
   チェック（数ms）で、外部URL・ページ内アンカー・絶対パス・コードフェンス内は対象外です。
   perl未導入の環境では省略します。検査しないリポジトリでは
-  `git config --local hooks.skipLinkCheck true` を設定します。
+  `git config --local hooks.skipLinkCheck true` または agent-settings（後述）の
+  `LINKCHECK=false` を設定します。
 - `commit-msg` は、件名の言語順を検査します。件名に日本語を含む場合は
   「英語の要約 / 日本語の要約」の1行（`docs/policies/git-and-remote.md`）でなければ
   拒否します。英語のみの件名は検査せず、Merge・Revert・fixupの件名、rebase・
@@ -223,6 +228,16 @@ kitを除去するときは、ディレクトリを削除する**前に**
   リポジトリに入っているスクリプトをpushだけで実行させないためです。
 - リポジトリ固有の `.git/hooks/` がある場合は検査後に委譲します。意図的に絶対パスを
   許可するリポジトリでは `git config --local hooks.allowLocalPaths true` を設定します。
+
+### 設定トグル（agent-settings）
+
+上記hookの一部と、`AGENTS.md` の一部の作業規則（自動commit、worktree必須、レビュー、
+CLI先行）は、`agent-settings.env` でリポジトリごとにON/OFFできます。解決は3層の後勝ちで、
+kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-settings.env` →
+同 `agent-settings.local.env`（git管理外。各repoの `.gitignore` へ追加し、個人・一時の
+切り替えに使う）の順です。書式は `KEY=value` の行だけ。キーの一覧と意味は
+`AGENTS.md` §13にあります。権限境界と証拠系の禁止事項（`--no-verify` 禁止等）は
+意図的にトグル化していません。
 
 ### 編集時の即時lint（Claude Code）
 

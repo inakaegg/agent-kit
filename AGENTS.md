@@ -149,3 +149,12 @@
 本ファイルやprojectの規則ファイルを編集したら、その変更を未commitのまま放置せず適宜commitする（分け方は§8の1commit 1目的に従う）。編集対象ファイルに他セッション由来の未commit差分があっても、規則変更のcommitを保留する理由にしない。
 
 逆方向も同じく禁止する。上の5条件を満たす一般規則（全projectに通用する作法・権限境界・品質基準）を、個別projectの `AGENTS.md` へ書かない。projectのAGENTSへ書くのはそのproject固有の差分だけとし、一般規則が必要になったら本ファイルへの追加をユーザーへ提案する。迷う場合は `instruction-placement.md` の判定順に従う。
+
+## 13. 設定トグル（agent-settings）
+
+一部の規則はON/OFFを設定へ切り出している。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。ファイルが無い層は飛ばす。書式は `KEY=value` の行（値は原則 true / false。`#` 始まりはコメント）。falseの規則はそのrepoでは適用しないが、§3の権限境界と§5の証拠系禁止事項（`--no-verify` 禁止等）はトグル化の対象外で常に有効とする。キーの追加は§12の条件と同様にユーザー確認を得て行い、既定値はkitの `agent-settings.env` に置く。
+
+- `AUTO_COMMIT`: §3の「実装依頼でローカルcommitまで行う」。falseなら変更のみ行い、commitはユーザーへ委ねる
+- `MAIN_DOC_GUARD` / `MAIN_GUARD_EXTRA_DOCS` / `TEXTLINT` / `LINKCHECK`: pre-commit hookの各検査（機械強制。EXTRA_DOCSは「文書扱い」に追加するglobの空白区切りで、既定はdotfile類 `.*`）
+- `REQUIRE_WORKTREE`: §8の「挙動変更はtask branch + 別worktree」。falseなら別branchのみでよい（main直接編集は不可のまま）
+- `INDEPENDENT_REVIEW`: §7の「通常対象作業の実装レビュー必須」。falseでも重リスク作業の3段階レビューは免除しない。`READABILITY_REVIEW`: §7の「人間向け文書の読みやすさレビュー」。`CLI_FIRST`: §5の「CLI先行実装（MUST）」
