@@ -46,7 +46,7 @@ description: >-
 ## 3. 実画面を起動する
 
 - Webでは、project付属のUI/E2E command、project dependency、local/global Playwright、installed browser、browser/DevTools系toolの順に、安全に使える実行経路を確認する。共有browserが利用できないことだけを理由に打ち切らない。
-- Playwrightと対応browserが利用可能なら、必ず実行する。自動install、package追加、browser downloadが必要な場合は、network、容量、repository変更の権限境界に従う。
+- Playwrightと対応browserが利用可能なら、必ず実行する。ただし `UI_BROWSER_VERIFICATION=screenshots` のときは自動検証を省略してよく、代わりに検証matrixの主要な組合せのスクショを `_ai/tasks/<開始日-slug>/screenshots/` へ保存し、保存先を報告してユーザー目視へ委ねる。`off` のときは実画面確認を全面免除し、最終報告へ未検証と明記する。自動install、package追加、browser downloadが必要な場合は、network、容量、repository変更の権限境界に従う。
 - 変更したinteractionは、開始状態から利用者操作と結果までを実際に通す。hoverなら対象からcontrolへのpointer移動、double clickならnative event列、keyboard/touchなら対象input methodを再現する。静止時のvisibility、bounding box、hit testだけで操作成功を代替しない。
 - native UIはnative app、simulator、preview等を使い、browser表示で代用しない。
 - userが特定browser・device・surfaceを指定した場合は優先する。

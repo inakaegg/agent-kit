@@ -63,7 +63,7 @@
 - 誤った動作を受け入れさせるためにテストを変更しない。新しいテスト自身を期待値の正しさの唯一の根拠にしない。
 - 入出力を文字列・データとして定義できる機能は、完了報告の前に、CLI等の実行可能経路で代表入力セットを実際に流して出力を確認する。代表入力の設計と報告の要件は `docs/policies/quality-details.md` に従う。
 - 機能は可能な限りCLIを先に実装し、UI・API層を後からその上へ重ねる（MUST。`CLI_FIRST=false` のrepoでは適用しない）。対象の判定基準と `docs/CLI.md` の書式は `docs/policies/quality-details.md` に従う。
-- UI変更は、対象の実画面を重要なsize・state・themeで直接確認する。実行経路の探し方と確認手順は `docs/policies/quality-details.md` と `$ui-verification` に従う。
+- UI変更は、対象の実画面を重要なsize・state・themeで直接確認する。実行経路の探し方と確認手順は `docs/policies/quality-details.md` と `$ui-verification` に従う。確認方式は `UI_BROWSER_VERIFICATION` で選ぶ。`full`（既定）はブラウザ自動検証まで必須、`screenshots` は主要画面のスクショをタスクdirectoryへ撮りためてユーザー目視へ委ね、`off` は実画面確認を免除して報告に未検証と明記する。
 - 外部サービスのfixtureは公式情報と匿名化した実観測を優先し、出典を記録する。通常のリグレッションテストはnetworkやAPI keyなしで実行できるようにする。詳細は `docs/policies/quality-details.md`。
 - 新しい非自明な機構を設計して定着したら、ユーザー向けの平易な解説文書と図を別途作る。書き方と図の規則は `docs/policies/quality-details.md` に従う。
 - 実装状況・進み具合を書く場所は `docs/ROADMAP.md`（またはプロジェクトが定めた1箇所）に限る。各文書の冒頭に更新日を置かず、状態の注記を複数文書へ撒かない。

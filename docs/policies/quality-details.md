@@ -16,7 +16,7 @@
 
 ## UIの実画面確認
 
-UI変更は、対象の実画面を重要なsize・state・themeで表示し、スクリーンショットまたは操作結果を直接確認する。Web UIでは共有browserの有無だけで打ち切らず、project付属、local/global Playwright、installed browser等の安全な実行経路を確認する。Playwrightと対応browserが利用可能なら、変更した主要な操作を開始から結果まで自動操作し、画面を直接確認することをMUSTとする。静止画像生成、DOM寸法、build/testだけで代替せず、試した経路と失敗の証跡なしに `VISUAL_QA_UNVERIFIED` としない。詳細は `$ui-verification`。
+UI変更は、対象の実画面を重要なsize・state・themeで表示し、スクリーンショットまたは操作結果を直接確認する。Web UIでは共有browserの有無だけで打ち切らず、project付属、local/global Playwright、installed browser等の安全な実行経路を確認する。Playwrightと対応browserが利用可能なら、変更した主要な操作を開始から結果まで自動操作し、画面を直接確認することをMUSTとする。`UI_BROWSER_VERIFICATION=screenshots` のときは自動操作を必須とせず、代わりに主要なsize・state・themeのスクリーンショットを `_ai/tasks/<開始日-slug>/screenshots/` へ保存し、保存先を報告してユーザーの目視判断へ委ねる。`off` のときは実画面確認自体を免除し、報告へ未検証と明記する（true/falseはfull/offの別名）。静止画像生成、DOM寸法、build/testだけで代替せず、試した経路と失敗の証跡なしに `VISUAL_QA_UNVERIFIED` としない。詳細は `$ui-verification`。
 
 ## 外部サービスのfixture
 
