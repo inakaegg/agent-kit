@@ -44,7 +44,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 ├── README.md
 ├── README.ja.md
 ├── .textlintrc.json         # 日本語文書lintの規則（pre-commitが参照）
-├── agent-settings.env       # 設定トグルの既定値（AGENTS.md §13）
+├── agent-settings.env       # 設定トグルの既定値（AGENTS.md §1）
 ├── prh.yaml                 # 用語辞書（レビュー指摘から育てる）
 ├── docs/
 │   ├── instruction-placement.md
@@ -235,9 +235,10 @@ kitを除去するときは、ディレクトリを削除する**前に**
 CLI先行）は、`agent-settings.env` でリポジトリごとにON/OFFできます。解決は3層の後勝ちで、
 kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-settings.env` →
 同 `agent-settings.local.env`（git管理外。各repoの `.gitignore` へ追加し、個人・一時の
-切り替えに使う）の順です。書式は `KEY=value` の行だけ。キーの一覧と意味は
-`AGENTS.md` §13にあります。権限境界と証拠系の禁止事項（`--no-verify` 禁止等）は
-意図的にトグル化していません。
+切り替えに使う）の順です。書式は `KEY=value` の行だけ。キーと既定値の一覧は
+kitの `agent-settings.env`（コメント付き）にあり、トグル対象の各規則は `AGENTS.md` の
+該当箇所にキー名を併記しています（解決の仕組みは `AGENTS.md` §1）。権限境界と
+証拠系の禁止事項（`--no-verify` 禁止等）は意図的にトグル化していません。
 
 ### 編集時の即時lint（Claude Code）
 

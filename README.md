@@ -25,7 +25,7 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 ├── README.md
 ├── README.ja.md
 ├── .textlintrc.json         # Japanese docs lint rules (used by pre-commit)
-├── agent-settings.env       # default values for the settings toggles (AGENTS.md §13)
+├── agent-settings.env       # default values for the settings toggles (AGENTS.md §1)
 ├── prh.yaml                 # terminology dictionary (grown from review findings)
 ├── docs/
 │   ├── instruction-placement.md
@@ -155,7 +155,7 @@ If `core.hooksPath` already points to your own hooks directory, do not overwrite
 
 ### Settings toggles (agent-settings)
 
-Some rules — the hook checks above and a few working rules in `AGENTS.md` (auto commit, worktree requirement, reviews, CLI-first) — can be switched per repository through `agent-settings.env`. Resolution is three layers, later wins: the kit's `agent-settings.env` (defaults) → `agent-settings.env` at the work repository's root → `agent-settings.local.env` there (untracked; add it to the repository's `.gitignore`; use it for personal or temporary switches). The format is plain `KEY=value` lines. The key list and meanings live in `AGENTS.md` §13; permission boundaries and the evidence rules (e.g. the `--no-verify` ban) are deliberately not toggleable.
+Some rules — the hook checks above and a few working rules in `AGENTS.md` (auto commit, worktree requirement, reviews, CLI-first) — can be switched per repository through `agent-settings.env`. Resolution is three layers, later wins: the kit's `agent-settings.env` (defaults) → `agent-settings.env` at the work repository's root → `agent-settings.local.env` there (untracked; add it to the repository's `.gitignore`; use it for personal or temporary switches). The format is plain `KEY=value` lines. The keys and their defaults live in the kit's `agent-settings.env` (commented); each toggleable rule in `AGENTS.md` names its key inline, and the resolution mechanism is defined in `AGENTS.md` §1. Permission boundaries and the evidence rules (e.g. the `--no-verify` ban) are deliberately not toggleable.
 
 ### Instant lint on edit (Claude Code)
 

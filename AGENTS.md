@@ -9,6 +9,7 @@
 - 変更対象へ適用される、ルートから対象ディレクトリまでの `AGENTS.md`、`CLAUDE.md`、その他の明示的な指示を読む。
 - 本文中の `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は、agent-kit（本ファイルの実体がある場所）内を指す。symlink経由で読んでいる場合は実体の場所を辿る。作業対象プロジェクトの `docs/` とは別物である。
 - 上位の指示を下位の指示が暗黙に弱めてはならない。矛盾があり、結果が実質的に変わる場合は推測で選ばず停止して報告する。
+- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。
 - 本ファイルへ、現在のタスクの仕様、試行履歴、技術スタック固有の細則、長い操作手順を追加しない。
 
 ## 2. 情報の正本
@@ -29,7 +30,7 @@
 
 - 各ユーザー発話について、その発話単体で許可範囲を判定する。前のターンの変更、push、PR、merge、deploy等の許可を自動的に引き継がない。
 - 質問・意見・調査・原因確認の依頼では、明示されない限りファイルを変更しない。問題を発見した場合は、根拠と修正案を報告して止める。
-- 実装・修正・更新が明示された場合は、対象ファイルの変更と、§8を満たしたその作業分の**ローカルcommit**を行ってよい。ユーザーがcommit不要と指示した場合は従う。
+- 実装・修正・更新が明示された場合は、対象ファイルの変更と、§8を満たしたその作業分の**ローカルcommit**を行ってよい（`AUTO_COMMIT=false` のときはcommitせず変更のみ行い、commitはユーザーへ委ねる）。ユーザーがcommit不要と指示した場合は従う。
 - read-onlyの `git status`、`git diff`、`git log`、検索、テスト実行は必要に応じて行ってよい。
 - push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成を許可するが、merge、base branchへのpush、public化を許可しない。
@@ -61,7 +62,7 @@
 - テスト、型、lint、security check、Hook、CIを無効化・弱体化・skipして通さない。`--no-verify`を使わない。
 - 誤った動作を受け入れさせるためにテストを変更しない。新しいテスト自身を期待値の正しさの唯一の根拠にしない。
 - 入出力を文字列・データとして定義できる機能は、完了報告の前に、CLI等の実行可能経路で代表入力セットを実際に流して出力を確認する。代表入力の設計と報告の要件は `docs/policies/quality-details.md` に従う。
-- 機能は可能な限りCLIを先に実装し、UI・API層を後からその上へ重ねる（MUST）。対象の判定基準と `docs/CLI.md` の書式は `docs/policies/quality-details.md` に従う。
+- 機能は可能な限りCLIを先に実装し、UI・API層を後からその上へ重ねる（MUST。`CLI_FIRST=false` のrepoでは適用しない）。対象の判定基準と `docs/CLI.md` の書式は `docs/policies/quality-details.md` に従う。
 - UI変更は、対象の実画面を重要なsize・state・themeで直接確認する。実行経路の探し方と確認手順は `docs/policies/quality-details.md` と `$ui-verification` に従う。
 - 外部サービスのfixtureは公式情報と匿名化した実観測を優先し、出典を記録する。通常のリグレッションテストはnetworkやAPI keyなしで実行できるようにする。詳細は `docs/policies/quality-details.md`。
 - 新しい非自明な機構を設計して定着したら、ユーザー向けの平易な解説文書と図を別途作る。書き方と図の規則は `docs/policies/quality-details.md` に従う。
@@ -81,15 +82,15 @@
 ## 7. 独立レビュー
 
 - 対象作業を2区分に分ける。**重リスク作業**は、公開API、永続化、並行・非同期状態、認証・security、課金、migration、deploy、または広いarchitectureに関わる変更。**通常対象作業**は、それ以外のユーザー可視動作か、PR化する非自明な変更。小さなtypo、formatterのみの変更等の軽微変更は対象外とし、レビューを要求しない。
-- レビューは**仕様レビュー → 計画レビュー → 実装レビュー**の3段階とする（過去の文書・Skillにある gate 1/2/3 の表記はこの3つを指す）。重リスク作業は3段階すべてを順に通し、通常対象作業は実装レビューだけを必須とする。各段階で `VERDICT: LGTM` を得るまで次へ進まない。
+- レビューは**仕様レビュー → 計画レビュー → 実装レビュー**の3段階とする（過去の文書・Skillにある gate 1/2/3 の表記はこの3つを指す）。重リスク作業は3段階すべてを順に通し、通常対象作業は実装レビューだけを必須とする（`INDEPENDENT_REVIEW=false` のときは通常対象作業のレビューを免除する。重リスク作業の3段階は免除しない）。各段階で `VERDICT: LGTM` を得るまで次へ進まない。
 - レビュー担当は、その成果物を作っていない、履歴を共有しない別セッションを必須とし、可能なら別のtool/modelを使う。担当の選び方、待ち方、渡す資料は `docs/policies/review.md` に従う。
-- 人間向け文書の新規作成と本文の実質更新は、履歴を共有しない別のfable系セッション（思考量はlowでよい）の読みやすさレビューを通してからcommitする。誤字修正等の軽微変更は対象外。
+- 人間向け文書の新規作成と本文の実質更新は、履歴を共有しない別のfable系セッション（思考量はlowでよい）の読みやすさレビューを通してからcommitする（`READABILITY_REVIEW=false` なら不要）。誤字修正等の軽微変更は対象外。
 - 指摘は**修正 / 記録のみ / 誤検知として反証**へ仕分け、裏付けのない指摘を修正必須として扱わない。指摘の件数上限、レビューの回数、修正必須が残った場合の扱いは `docs/policies/review.md` に従う。
 - GitHub bot・CIを含む反復は `$pr-review-loop` に従う。mergeは常に明示許可を必要とする。
 
 ## 8. Gitとローカルcommit
 
-- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。
+- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。
 - 誤字修正など、コードや製品挙動を変えない軽微な文書更新は、branchとstatusを確認し、他作業の差分を巻き込まない場合に限り `main` のcheckoutで行ってよい。
 - 上のどちらに該当するか判断できない場合は、編集を始める前にユーザーへ確認する。
 - 調査とread-only操作は現在のcheckoutで行ってよい。
@@ -149,12 +150,3 @@
 本ファイルやprojectの規則ファイルを編集したら、その変更を未commitのまま放置せず適宜commitする（分け方は§8の1commit 1目的に従う）。編集対象ファイルに他セッション由来の未commit差分があっても、規則変更のcommitを保留する理由にしない。
 
 逆方向も同じく禁止する。上の5条件を満たす一般規則（全projectに通用する作法・権限境界・品質基準）を、個別projectの `AGENTS.md` へ書かない。projectのAGENTSへ書くのはそのproject固有の差分だけとし、一般規則が必要になったら本ファイルへの追加をユーザーへ提案する。迷う場合は `instruction-placement.md` の判定順に従う。
-
-## 13. 設定トグル（agent-settings）
-
-一部の規則はON/OFFを設定へ切り出している。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。ファイルが無い層は飛ばす。書式は `KEY=value` の行（値は原則 true / false。`#` 始まりはコメント）。falseの規則はそのrepoでは適用しないが、§3の権限境界と§5の証拠系禁止事項（`--no-verify` 禁止等）はトグル化の対象外で常に有効とする。キーの追加は§12の条件と同様にユーザー確認を得て行い、既定値はkitの `agent-settings.env` に置く。
-
-- `AUTO_COMMIT`: §3の「実装依頼でローカルcommitまで行う」。falseなら変更のみ行い、commitはユーザーへ委ねる
-- `MAIN_DOC_GUARD` / `MAIN_GUARD_EXTRA_DOCS` / `TEXTLINT` / `LINKCHECK`: pre-commit hookの各検査（機械強制。EXTRA_DOCSは「文書扱い」に追加するglobの空白区切りで、既定はdotfile類 `.*`）
-- `REQUIRE_WORKTREE`: §8の「挙動変更はtask branch + 別worktree」。falseなら別branchのみでよい（main直接編集は不可のまま）
-- `INDEPENDENT_REVIEW`: §7の「通常対象作業の実装レビュー必須」。falseでも重リスク作業の3段階レビューは免除しない。`READABILITY_REVIEW`: §7の「人間向け文書の読みやすさレビュー」。`CLI_FIRST`: §5の「CLI先行実装（MUST）」

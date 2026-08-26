@@ -9,7 +9,7 @@
 
 set -u
 
-# agent-settings（AGENTS.md §13）の3層からキーを解決する。
+# agent-settings（AGENTS.md §1）の3層からキーを解決する。
 # <repo>/agent-settings.local.env → <repo>/agent-settings.env → kit既定 の順で
 # 最初に見つかった値を返し、どこにも無ければ第2引数の既定を返す。
 # 値の書式は KEY=value（引用符なし・1行）。空値も「設定あり」として尊重する。
@@ -239,7 +239,7 @@ run_main_guard() {
     echo "対応:"
     echo "  - task専用branchとworktreeを作ってからcommitする（共通AGENTS.md §8）"
     echo "  - main直接commitが慣行のリポジトリでは: git config --local hooks.allowMainCommits true"
-    echo "  - 文書扱いのパターン追加・ガード無効化は agent-settings.env（AGENTS.md §13）"
+    echo "  - 文書扱いのパターン追加・ガード無効化は agent-settings.env（AGENTS.md §1）"
     echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
   } >&2
   exit 1
