@@ -52,7 +52,7 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 │   └── policies/
 │       └── git-and-remote.md
 ├── git-hooks/
-│   ├── commit-msg           # 件名の「英語 / 日本語」順を強制
+│   ├── commit-msg           # 件名の言語順を強制（既定は「英語 / 日本語」）
 │   ├── pre-commit           # branch・秘密情報・環境依存絶対パス・日本語lint・文書リンクをcommit時に検査
 │   └── pre-push             # push前にgitleaksで秘密情報を走査（初回pushは全履歴）
 ├── skills/                  # 各Skillは SKILL.md と agents/openai.yaml を持つ
@@ -215,10 +215,12 @@ kitを除去するときは、ディレクトリを削除する**前に**
   `git config --local hooks.skipLinkCheck true` または agent-settings（後述）の
   `LINKCHECK=false` を設定します。
 - `commit-msg` は、件名の言語順を検査します。件名に日本語を含む場合は
-  「英語の要約 / 日本語の要約」の1行（`docs/policies/git-and-remote.md`）でなければ
-  拒否します。英語のみの件名は検査せず、Merge・Revert・fixupの件名、rebase・
-  cherry-pickが再生するメッセージも対象外です。検査しないリポジトリでは
-  `git config --local hooks.skipSubjectLang true` を設定します。
+  `COMMIT_SUBJECT_LANG_ORDER` が示す順（`docs/policies/git-and-remote.md`）でなければ
+  拒否します。既定の `en-ja` は「英語の要約 / 日本語の要約」、`ja-en` はその逆、
+  `off` は検査しません。英語のみの件名は検査せず、Merge・Revert・fixupの件名、
+  rebase・cherry-pickが再生するメッセージも対象外です。順序の指定はリポジトリ直下の
+  `agent-settings.env` へ書くと、選択がリポジトリと一緒にcommitされます。
+  `git config --local hooks.skipSubjectLang true` も従来どおり除外として使えます。
 - `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
   秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
   pushを通します（`brew install gitleaks` で有効化）。
@@ -232,7 +234,8 @@ kitを除去するときは、ディレクトリを削除する**前に**
 ### 設定トグル（agent-settings）
 
 上記hookの一部と、`AGENTS.md` の一部の作業規則（自動commit、worktree必須、レビュー、
-CLI先行）は、`agent-settings.env` でリポジトリごとにON/OFFできます。解決は3層の後勝ちで、
+CLI先行）は、`agent-settings.env` でリポジトリごとに切り替えられます。多くはON/OFFですが、
+commit件名の言語順のように固有の値を取るキーもあります。解決は3層の後勝ちで、
 kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-settings.env` →
 同 `agent-settings.local.env`（git管理外。各repoの `.gitignore` へ追加し、個人・一時の
 切り替えに使う）の順です。書式は `KEY=value` の行だけ。キーと既定値の一覧は

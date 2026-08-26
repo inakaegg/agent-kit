@@ -1,17 +1,43 @@
 #!/bin/sh
 # commit件名の言語順を検査するグローバル commit-msg hook。
-# 件名に日本語を含む場合、「英語の要約 / 日本語の要約」の順
+# 件名に日本語を含む場合、agent-settings の COMMIT_SUBJECT_LANG_ORDER が示す順
 # （docs/policies/git-and-remote.md）でなければcommitを拒否する。
 # 日本語を含まない件名は検査しない（repository固有の英語規約を妨げない）。
 #
+# COMMIT_SUBJECT_LANG_ORDER の値:
+#   en-ja  「英語の要約 / 日本語の要約」の順（既定）
+#   ja-en  「日本語の要約 / 英語の要約」の順
+#   off    言語順を検査しない
+# 規約上もともとrepository規則が優先なので（docs/policies/git-and-remote.md）、
+# 日本語先を明文化しているrepositoryは repo直下の agent-settings.env で ja-en にする。
+#
 # 適用: git config --global core.hooksPath <このディレクトリ>
-# リポジトリ単位で意図的に無効化する場合:
+# 旧来の除外手段も後方互換のため残す（agent-settings.env へ書けないときだけ使う）:
 #   git config --local hooks.skipSubjectLang true
 # このhookが拒否したcommitを --no-verify で通さないこと（共通AGENTS.md §5）。
 
 set -u
 
 msg_file="$1"
+
+# agent-settings（AGENTS.md §1）の3層からキーを解決する。
+# <repo>/agent-settings.local.env → <repo>/agent-settings.env → kit既定 の順で
+# 最初に見つかった値を返し、どこにも無ければ第2引数の既定を返す。
+# 値の書式は KEY=value（引用符なし・1行）。空値も「設定あり」として尊重する。
+# pre-commit と同じ実装。3つ目のhookが必要になったら共有ファイルへ切り出す。
+setting() {
+  _key="$1"; _default="$2"
+  _top="$(git rev-parse --show-toplevel 2>/dev/null)"
+  _kit="$(cd "$(dirname "$0")/.." && pwd -P)"
+  for _f in "$_top/agent-settings.local.env" "$_top/agent-settings.env" "$_kit/agent-settings.env"; do
+    [ -f "$_f" ] || continue
+    if grep -q "^${_key}=" "$_f" 2>/dev/null; then
+      sed -n "s/^${_key}=//p" "$_f" | tail -n 1
+      return 0
+    fi
+  done
+  printf '%s\n' "$_default"
+}
 
 # リポジトリ固有の .git/hooks/commit-msg があれば最後に委譲する。
 # --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
@@ -47,16 +73,40 @@ check_subject_lang() {
   command -v perl >/dev/null 2>&1 || return 0
   jp_re='[\x{3005}\x{3040}-\x{309f}\x{30a0}-\x{30ff}\x{3400}-\x{4dbf}\x{4e00}-\x{9fff}\x{ff01}-\x{ff5e}\x{ff66}-\x{ff9f}\x{3001}-\x{3015}]'
   printf '%s' "$subject" | perl -CSD -ne "exit(/$jp_re/ ? 0 : 1)" || return 0
-  # 日本語を含む件名は「ASCII英文 + ' / ' + 日本語を含む残り」の形だけ通す。
-  if printf '%s' "$subject" | perl -CSD -ne "exit(m{^[ -~]+ / .*$jp_re} ? 0 : 1)"; then
+  # 設定値を読むのは、検査が実際に走ると決まってから。ここより前で不正値を弾くと、
+  # rebase・cherry-pickの再生やmerge commitまで設定ミス1つで塞がり、復旧できなくなる。
+  order="$(setting COMMIT_SUBJECT_LANG_ORDER en-ja)"
+  case "$order" in
+    off) return 0 ;;
+    en-ja|ja-en) ;;
+    *)
+      {
+        echo "commit-msg: COMMIT_SUBJECT_LANG_ORDER の値が不正なためcommitを中止しました。"
+        echo "  値: $order"
+        echo "  - 使える値は en-ja / ja-en / off（agent-settings.env、AGENTS.md §1）"
+      } >&2
+      exit 1
+      ;;
+  esac
+  # 日本語を含む件名は、指定順に並んだ1行だけ通す。
+  # en-ja: ASCII英文 + ' / ' + 日本語を含む残り / ja-en: 日本語を含む前半 + ' / ' + ASCII英文
+  if [ "$order" = "ja-en" ]; then
+    subject_re="^.*$jp_re.* / [ -~]+\$"
+    expected="「日本語の要約 / 英語の要約」"
+  else
+    subject_re="^[ -~]+ / .*$jp_re"
+    expected="「英語の要約 / 日本語の要約」"
+  fi
+  if printf '%s' "$subject" | perl -CSD -ne "exit(m{$subject_re} ? 0 : 1)"; then
     return 0
   fi
   {
     echo "commit-msg: 件名の言語順が規則と異なるためcommitを中止しました。"
     echo "  件名: $subject"
-    echo "  - 「英語の要約 / 日本語の要約」の順の1行にする（docs/policies/git-and-remote.md）"
+    echo "  - ${expected}の順の1行にする（docs/policies/git-and-remote.md）"
     echo "  - 英語規約のリポジトリでは日本語を件名に入れない"
-    echo "  - このリポジトリで意図的に無効化する場合: git config --local hooks.skipSubjectLang true"
+    echo "  - 順序を変える場合は repo直下の agent-settings.env へ COMMIT_SUBJECT_LANG_ORDER=ja-en"
+    echo "  - 検査しない場合は同じファイルへ COMMIT_SUBJECT_LANG_ORDER=off"
     echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
   } >&2
   exit 1

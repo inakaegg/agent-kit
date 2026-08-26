@@ -24,6 +24,11 @@ def make_repo(case: unittest.TestCase) -> Path:
     return d
 
 
+def write_settings(repo: Path, line: str, local: bool = False) -> None:
+    name = "agent-settings.local.env" if local else "agent-settings.env"
+    (repo / name).write_text(line + "\n", encoding="utf-8")
+
+
 def run_commit_msg(repo: Path, subject: str) -> int:
     msg = repo / "msg.txt"
     msg.write_text(subject + "\n", encoding="utf-8")
@@ -62,6 +67,77 @@ class CommitMsgSubjectLangTests(unittest.TestCase):
             check=True, env=clean_env(),
         )
         self.assertEqual(run_commit_msg(repo, "日本語だけの件名"), 0)
+
+    def test_repo_settings_select_japanese_first(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 0)
+        self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 1)
+
+    def test_repo_settings_select_english_first_explicitly(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=en-ja")
+        self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 0)
+        self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 1)
+
+    def test_japanese_first_still_needs_a_slash(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        self.assertEqual(run_commit_msg(repo, "機能を追加"), 1)
+
+    def test_japanese_first_rejects_japanese_on_both_sides(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        self.assertEqual(run_commit_msg(repo, "機能を追加 / 機能の追加"), 1)
+
+    def test_english_only_passes_in_japanese_first_order(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
+
+    def test_settings_off_skips_check(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=off")
+        self.assertEqual(run_commit_msg(repo, "日本語だけの件名"), 0)
+
+    def test_local_settings_override_repo_settings(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=en-ja")
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en", local=True)
+        self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 0)
+
+    def test_invalid_setting_is_rejected(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        # 設定の誤りを黙って既定へ倒すと、効いていない設定に気づけない。
+        self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 1)
+
+    # 設定値の検証は、検査が実際に走ると決まってからにする。除外の側で先に抜ける経路まで
+    # 不正値で止めると、設定ミス1つでrebaseの再生やmerge commitが塞がり復旧できなくなる。
+    def test_invalid_setting_does_not_block_rebase_replay(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        (repo / ".git" / "rebase-merge").mkdir()
+        self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 0)
+
+    def test_invalid_setting_does_not_block_opted_out_repo(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "--local", "hooks.skipSubjectLang", "true"],
+            check=True, env=clean_env(),
+        )
+        self.assertEqual(run_commit_msg(repo, "日本語だけの件名"), 0)
+
+    def test_invalid_setting_does_not_block_merge_subject(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        self.assertEqual(run_commit_msg(repo, "Merge branch 'feature/日本語'"), 0)
+
+    def test_invalid_setting_does_not_block_english_only_subject(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
 
 
 class PreCommitBranchGuardTests(unittest.TestCase):
