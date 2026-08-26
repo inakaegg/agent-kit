@@ -7,6 +7,8 @@
       "sentence-length": {
         "max": 150
       },
+      "max-kanji-continuous-len": false,
+      "max-comma": false,
       "ja-no-mixed-period": false,
       "no-mix-dearu-desumasu": false,
       "no-doubled-joshi": false
