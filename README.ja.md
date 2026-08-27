@@ -215,12 +215,16 @@ kitを除去するときは、ディレクトリを削除する**前に**
   `git config --local hooks.skipLinkCheck true` または agent-settings（後述）の
   `LINKCHECK=false` を設定します。
 - `commit-msg` は、件名の言語順を検査します。件名に日本語を含む場合は
-  `COMMIT_SUBJECT_LANG_ORDER` が示す順（`docs/policies/git-and-remote.md`）でなければ
+  `COMMIT_LANG_ORDER` が示す順（`docs/policies/git-and-remote.md`）でなければ
   拒否します。既定の `en-ja` は「英語の要約 / 日本語の要約」、`ja-en` はその逆、
   `off` は検査しません。英語のみの件名は検査せず、Merge・Revert・fixupの件名、
   rebase・cherry-pickが再生するメッセージも対象外です。順序の指定はリポジトリ直下の
   `agent-settings.env` へ書くと、選択がリポジトリと一緒にcommitされます。
   `git config --local hooks.skipSubjectLang true` も従来どおり除外として使えます。
+- `commit-msg` は、本文の言語も同じ `COMMIT_LANG_ORDER` で検査します。件名に日本語を
+  含み本文がある場合は、英語と日本語の併記を同じ順で要求します。本文なしのcommitと、
+  末尾のtrailerブロック（`Co-Authored-By:` 等）・区切り線だけの本文は対象外です。
+  `git config --local hooks.skipBodyLang true` でも除外できます。
 - `pre-push` は、push対象のcommit範囲（初回pushは到達可能な全履歴）をgitleaksで走査し、
   秘密情報らしき値を検出したらpushを拒否します。gitleaks未導入の環境では警告だけ出して
   pushを通します（`brew install gitleaks` で有効化）。
