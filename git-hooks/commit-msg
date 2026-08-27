@@ -1,10 +1,10 @@
 #!/bin/sh
-# commit件名の言語順を検査するグローバル commit-msg hook。
-# 件名に日本語を含む場合、agent-settings の COMMIT_SUBJECT_LANG_ORDER が示す順
+# commit件名と本文の言語を検査するグローバル commit-msg hook。
+# 件名に日本語を含む場合、agent-settings の COMMIT_LANG_ORDER が示す順
 # （docs/policies/git-and-remote.md）でなければcommitを拒否する。
 # 日本語を含まない件名は検査しない（repository固有の英語規約を妨げない）。
 #
-# COMMIT_SUBJECT_LANG_ORDER の値:
+# COMMIT_LANG_ORDER の値（件名・本文の両方に効く）:
 #   en-ja  「英語の要約 / 日本語の要約」の順（既定）
 #   ja-en  「日本語の要約 / 英語の要約」の順
 #   off    言語順を検査しない
@@ -12,8 +12,12 @@
 # 日本語先を明文化しているrepositoryは repo直下の agent-settings.env で ja-en にする。
 #
 # 適用: git config --global core.hooksPath <このディレクトリ>
+# 本文も同じキーで検査する（値は同じ en-ja / ja-en / off）。
+# 件名が日本語規約で本文があるcommitは、英語と日本語の併記を指定順で要求する。
+#
 # 旧来の除外手段も後方互換のため残す（agent-settings.env へ書けないときだけ使う）:
-#   git config --local hooks.skipSubjectLang true
+#   git config --local hooks.skipSubjectLang true   # 件名検査
+#   git config --local hooks.skipBodyLang true      # 本文検査
 # このhookが拒否したcommitを --no-verify で通さないこと（共通AGENTS.md §5）。
 
 set -u
@@ -75,13 +79,13 @@ check_subject_lang() {
   printf '%s' "$subject" | perl -CSD -ne "exit(/$jp_re/ ? 0 : 1)" || return 0
   # 設定値を読むのは、検査が実際に走ると決まってから。ここより前で不正値を弾くと、
   # rebase・cherry-pickの再生やmerge commitまで設定ミス1つで塞がり、復旧できなくなる。
-  order="$(setting COMMIT_SUBJECT_LANG_ORDER en-ja)"
+  order="$(setting COMMIT_LANG_ORDER en-ja)"
   case "$order" in
     off) return 0 ;;
     en-ja|ja-en) ;;
     *)
       {
-        echo "commit-msg: COMMIT_SUBJECT_LANG_ORDER の値が不正なためcommitを中止しました。"
+        echo "commit-msg: COMMIT_LANG_ORDER の値が不正なためcommitを中止しました。"
         echo "  値: $order"
         echo "  - 使える値は en-ja / ja-en / off（agent-settings.env、AGENTS.md §1）"
       } >&2
@@ -105,12 +109,111 @@ check_subject_lang() {
     echo "  件名: $subject"
     echo "  - ${expected}の順の1行にする（docs/policies/git-and-remote.md）"
     echo "  - 英語規約のリポジトリでは日本語を件名に入れない"
-    echo "  - 順序を変える場合は repo直下の agent-settings.env へ COMMIT_SUBJECT_LANG_ORDER=ja-en"
-    echo "  - 検査しない場合は同じファイルへ COMMIT_SUBJECT_LANG_ORDER=off"
+    echo "  - 順序を変える場合は repo直下の agent-settings.env へ COMMIT_LANG_ORDER=ja-en"
+    echo "  - 検査しない場合は同じファイルへ COMMIT_LANG_ORDER=off"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+}
+
+# 本文の言語を検査する。件名が日本語規約（日本語を含む）かつ本文に実質行が
+# あるときだけ、英語・日本語の両方が COMMIT_LANG_ORDER の順で並ぶことを
+# 要求する（件名と同じキー・同じ値）。本文なしのcommitは通す。
+# 末尾のtrailerブロック（Co-Authored-By等）と区切り線は本文と数えない。
+check_body_lang() {
+  if [ "$(git config --type=bool --default=false hooks.skipBodyLang)" = "true" ]; then
+    return 0
+  fi
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  for marker in rebase-merge rebase-apply MERGE_MSG CHERRY_PICK_HEAD; do
+    [ -e "$git_dir/$marker" ] && return 0
+  done
+  subject="$(grep -v '^#' "$msg_file" | sed -n '1p')"
+  [ -n "$subject" ] || return 0
+  case "$subject" in
+    Merge\ *|Revert\ *|fixup!*|squash!*|amend!*) return 0 ;;
+  esac
+  command -v perl >/dev/null 2>&1 || return 0
+  jp_re='[\x{3005}\x{3040}-\x{309f}\x{30a0}-\x{30ff}\x{3400}-\x{4dbf}\x{4e00}-\x{9fff}\x{ff01}-\x{ff5e}\x{ff66}-\x{ff9f}\x{3001}-\x{3015}]'
+  # 件名が日本語規約でないrepositoryの本文は検査しない（英語規約を妨げない）。
+  printf '%s' "$subject" | perl -CSD -ne "exit(/$jp_re/ ? 0 : 1)" || return 0
+  # 件名の検査と同じく、不正な設定値で拒否するのは検査対象の本文が実在すると
+  # 分かってから（本文なしのcommitまで設定ミス1つで塞がない）。判定はperl側で行う。
+  order="$(setting COMMIT_LANG_ORDER en-ja)"
+  [ "$order" = "off" ] && return 0
+  BODY_ORDER="$order" BODY_JP_RE="$jp_re" perl -CSD -e '
+    my $jp = qr/$ENV{BODY_JP_RE}/;
+    open my $fh, "<:encoding(UTF-8)", $ARGV[0] or exit 0;
+    my @lines;
+    my $seen_subject = 0;
+    while (my $l = <$fh>) {
+      next if $l =~ /^#/;
+      if (!$seen_subject) { $seen_subject = 1 if $l =~ /\S/; next; }
+      chomp $l;
+      push @lines, $l;
+    }
+    # trailerブロックはGitと同じく構造で判定する: 末尾の段落の全行が
+    # trailer形式（コロン後の空白は任意）か区切り線のとき、その段落だけを除外する。
+    # 本文中間の「Reason: ...」のような行は本文として数える。
+    my $end = $#lines;
+    $end-- while $end >= 0 && $lines[$end] =~ /^\s*$/;
+    if ($end >= 0) {
+      my $start = $end;
+      $start-- while $start >= 0 && $lines[$start] !~ /^\s*$/;
+      my $all_trailer = 1;
+      for my $k ($start + 1 .. $end) {
+        next if $lines[$k] =~ /^[A-Za-z][A-Za-z0-9-]*:\s*\S/;
+        next if $lines[$k] =~ /^-{3,}\s*$/;
+        $all_trailer = 0;
+        last;
+      }
+      splice(@lines, $start + 1) if $all_trailer;
+    }
+    my ($en_at, $jp_at, $i) = (-1, -1, 0);
+    for my $l (@lines) {
+      next if $l =~ /^\s*$/;
+      next if $l =~ /^-{3,}\s*$/;
+      $jp_at = $i if $jp_at < 0 && $l =~ $jp;
+      $en_at = $i if $en_at < 0 && $l !~ $jp && $l =~ /[A-Za-z]/;
+      $i++;
+    }
+    exit 0 if $en_at < 0 && $jp_at < 0;
+    exit 2 if $jp_at < 0;
+    exit 3 if $en_at < 0;
+    my $o = $ENV{BODY_ORDER};
+    exit 5 unless $o eq "en-ja" || $o eq "ja-en";
+    exit(($o eq "ja-en" ? $jp_at < $en_at : $en_at < $jp_at) ? 0 : 4);
+  ' "$msg_file"
+  body_status=$?
+  [ "$body_status" -eq 0 ] && return 0
+  if [ "$body_status" -eq 5 ]; then
+    {
+      echo "commit-msg: COMMIT_LANG_ORDER の値が不正なためcommitを中止しました。"
+      echo "  値: $order"
+      echo "  - 使える値は en-ja / ja-en / off（agent-settings.env、AGENTS.md §1）"
+    } >&2
+    exit 1
+  fi
+  if [ "$order" = "ja-en" ]; then
+    expected="「日本語の説明 → 英語の説明」"
+  else
+    expected="「英語の説明 → 日本語の説明」"
+  fi
+  {
+    echo "commit-msg: 本文の言語が規則と異なるためcommitを中止しました。"
+    case "$body_status" in
+      2) echo "  - 本文に日本語の説明がありません" ;;
+      3) echo "  - 本文に英語の説明がありません" ;;
+      4) echo "  - 本文の言語順が${expected}になっていません" ;;
+    esac
+    echo "  - 本文は英語と日本語を${expected}の順で併記する（docs/policies/git-and-remote.md）"
+    echo "  - 順序を変える場合は repo直下の agent-settings.env へ COMMIT_LANG_ORDER=ja-en"
+    echo "  - 検査しない場合は同じファイルへ COMMIT_LANG_ORDER=off"
     echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
   } >&2
   exit 1
 }
 
 check_subject_lang
+check_body_lang
 run_local_hook "$@"

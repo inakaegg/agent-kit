@@ -70,45 +70,45 @@ class CommitMsgSubjectLangTests(unittest.TestCase):
 
     def test_repo_settings_select_japanese_first(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en")
         self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 0)
         self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 1)
 
     def test_repo_settings_select_english_first_explicitly(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=en-ja")
+        write_settings(repo, "COMMIT_LANG_ORDER=en-ja")
         self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 0)
         self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 1)
 
     def test_japanese_first_still_needs_a_slash(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en")
         self.assertEqual(run_commit_msg(repo, "機能を追加"), 1)
 
     def test_japanese_first_rejects_japanese_on_both_sides(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en")
         self.assertEqual(run_commit_msg(repo, "機能を追加 / 機能の追加"), 1)
 
     def test_english_only_passes_in_japanese_first_order(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en")
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en")
         self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
 
     def test_settings_off_skips_check(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=off")
+        write_settings(repo, "COMMIT_LANG_ORDER=off")
         self.assertEqual(run_commit_msg(repo, "日本語だけの件名"), 0)
 
     def test_local_settings_override_repo_settings(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=en-ja")
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=ja-en", local=True)
+        write_settings(repo, "COMMIT_LANG_ORDER=en-ja")
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en", local=True)
         self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 0)
 
     def test_invalid_setting_is_rejected(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
         # 設定の誤りを黙って既定へ倒すと、効いていない設定に気づけない。
         self.assertEqual(run_commit_msg(repo, "Add feature / 機能を追加"), 1)
 
@@ -116,13 +116,13 @@ class CommitMsgSubjectLangTests(unittest.TestCase):
     # 不正値で止めると、設定ミス1つでrebaseの再生やmerge commitが塞がり復旧できなくなる。
     def test_invalid_setting_does_not_block_rebase_replay(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
         (repo / ".git" / "rebase-merge").mkdir()
         self.assertEqual(run_commit_msg(repo, "機能を追加 / Add feature"), 0)
 
     def test_invalid_setting_does_not_block_opted_out_repo(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
         subprocess.run(
             ["git", "-C", str(repo), "config", "--local", "hooks.skipSubjectLang", "true"],
             check=True, env=clean_env(),
@@ -131,12 +131,129 @@ class CommitMsgSubjectLangTests(unittest.TestCase):
 
     def test_invalid_setting_does_not_block_merge_subject(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
         self.assertEqual(run_commit_msg(repo, "Merge branch 'feature/日本語'"), 0)
 
     def test_invalid_setting_does_not_block_english_only_subject(self):
         repo = make_repo(self)
-        write_settings(repo, "COMMIT_SUBJECT_LANG_ORDER=japanese-first")
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
+        self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
+
+
+JA_SUBJECT = "Add feature / 機能を追加"
+
+
+def body_msg(*body_lines: str, subject: str = JA_SUBJECT) -> str:
+    return subject + "\n\n" + "\n".join(body_lines)
+
+
+class CommitMsgBodyLangTests(unittest.TestCase):
+    def test_english_then_japanese_body_passes(self):
+        repo = make_repo(self)
+        msg = body_msg(
+            "Explain the change in English.",
+            "",
+            "変更内容を日本語で説明する。",
+            "",
+            "Co-Authored-By: Someone <a@example.com>",
+        )
+        self.assertEqual(run_commit_msg(repo, msg), 0)
+
+    def test_english_only_body_is_rejected(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, body_msg("English only body.")), 1)
+
+    def test_japanese_only_body_is_rejected(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, body_msg("日本語だけの本文。")), 1)
+
+    def test_japanese_first_body_is_rejected_by_default(self):
+        repo = make_repo(self)
+        msg = body_msg("日本語の説明。", "", "English explanation.")
+        self.assertEqual(run_commit_msg(repo, msg), 1)
+
+    # キーは件名と共通なので、ja-en設定のテストは件名もja-en順にする。
+    def test_ja_en_setting_accepts_japanese_first_body(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en")
+        msg = body_msg("日本語の説明。", "", "English explanation.",
+                       subject="機能を追加 / Add feature")
+        self.assertEqual(run_commit_msg(repo, msg), 0)
+
+    def test_ja_en_setting_rejects_english_first_body(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_LANG_ORDER=ja-en")
+        msg = body_msg("English explanation.", "", "日本語の説明。",
+                       subject="機能を追加 / Add feature")
+        self.assertEqual(run_commit_msg(repo, msg), 1)
+
+    def test_off_skips_body_check(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_LANG_ORDER=off")
+        self.assertEqual(run_commit_msg(repo, body_msg("English only body.")), 0)
+
+    def test_bodyless_commit_passes(self):
+        repo = make_repo(self)
+        self.assertEqual(run_commit_msg(repo, JA_SUBJECT), 0)
+
+    def test_trailer_and_separator_only_body_passes(self):
+        repo = make_repo(self)
+        msg = body_msg("---", "Co-Authored-By: Someone <a@example.com>")
+        self.assertEqual(run_commit_msg(repo, msg), 0)
+
+    def test_trailer_without_space_after_colon_is_excluded(self):
+        # Gitのtrailer構文はコロン後の空白が任意。
+        repo = make_repo(self)
+        msg = body_msg("Signed-off-by:Someone <a@example.com>")
+        self.assertEqual(run_commit_msg(repo, msg), 0)
+
+    def test_key_like_line_mid_body_counts_as_body(self):
+        # 末尾ブロック以外の「Key: ...」行はtrailerではなく本文（英語側）と数える。
+        repo = make_repo(self)
+        msg = body_msg("Reason: Explain the change.", "", "変更理由を日本語で説明する。")
+        self.assertEqual(run_commit_msg(repo, msg), 0)
+
+    def test_key_like_line_mid_body_still_requires_japanese(self):
+        repo = make_repo(self)
+        msg = body_msg(
+            "Reason: Explain the change.",
+            "",
+            "More English detail.",
+            "",
+            "Co-Authored-By: Someone <a@example.com>",
+        )
+        self.assertEqual(run_commit_msg(repo, msg), 1)
+
+    def test_english_subject_body_is_not_checked(self):
+        repo = make_repo(self)
+        msg = body_msg("English only body.", subject="English only subject")
+        self.assertEqual(run_commit_msg(repo, msg), 0)
+
+    def test_skip_body_lang_config_opts_out(self):
+        repo = make_repo(self)
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "--local", "hooks.skipBodyLang", "true"],
+            check=True, env=clean_env(),
+        )
+        self.assertEqual(run_commit_msg(repo, body_msg("English only body.")), 0)
+
+    def test_invalid_setting_is_rejected(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
+        msg = body_msg("English body.", "", "日本語の本文。")
+        self.assertEqual(run_commit_msg(repo, msg), 1)
+
+    # キー統合により、日本語件名では不正値が件名検査の側で先に拒否される。
+    # 本文検査のfail-open（検査対象がなければ設定値を読まない）は、件名検査が
+    # 走らない英語件名のbodyless commitで確認する。
+    def test_invalid_setting_rejects_japanese_subject_bodyless_commit(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
+        self.assertEqual(run_commit_msg(repo, JA_SUBJECT), 1)
+
+    def test_invalid_setting_does_not_block_english_bodyless_commit(self):
+        repo = make_repo(self)
+        write_settings(repo, "COMMIT_LANG_ORDER=japanese-first")
         self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
 
 
