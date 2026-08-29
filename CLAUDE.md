@@ -11,3 +11,7 @@
 プラグインや外部Skillの指示が `AGENTS.md` と矛盾する場合は、`AGENTS.md` を優先する。重複する領域では `AGENTS.md` が参照する自作Skillを使う。
 
 外部Skill `natural-japanese`（日本語文書の執筆・推敲）を導入済み。README・SPEC・ROADMAP・ADR等のdocs工程では `$docs-maintenance` を正とし、natural-japaneseは文章の執筆・推敲層としてだけ使う。repo管理下の文書をnatural-japaneseでリライトする際は、textlint制御コメント・front matter・既存の文書規約（`CLI.md` の表のみ規則等）を保持する。
+
+外部ライティングSkillとして `japanese-tech-writing`（論証・段落構成・読み手の負荷）と `cognitive-rhythm-writing`（読み物の緩急設計）も試験導入済み（出所と削除手順は各Skillディレクトリの `SOURCE.md`）。層分けは次のとおり。技術文書・解説文の論理構造と論証はjapanese-tech-writing、文の自然さ・AI臭さ除去はnatural-japanese、記事・章・エッセイなど読み物の緩急だけcognitive-rhythm-writingを使う。cognitive-rhythm-writingをdocs工程（README・SPEC等）へ適用しない。japanese-tech-writingの整形規則（一文一行改行・中黒禁止等）がrepoの文書規約やtextlint設定と矛盾する場合は、repo側を優先する。
+
+外部Skill `grill-me`（実体は `grilling`）を試験導入済み。計画・設計の要件出しをユーザーが明示的に求めたときだけ使い、`_ai/tasks/` の契約（TASK.md）を書く前の段階に限る。AGENTS.md §7の独立レビューの代替にしない。
