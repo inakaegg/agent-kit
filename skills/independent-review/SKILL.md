@@ -3,7 +3,7 @@ name: independent-review
 description: >-
   Use for fresh-context review of non-trivial changes before a PR. Targets: user-visible behavior /
   public API / persistence / concurrency・async / security / billing / deployment / migration.
-  Japanese cues: 「独立レビュー」「別contextでレビュー」「仕様レビュー」「計画レビュー」「実装レビュー」（旧称: gateレビュー）.
+  Japanese cues: 「独立レビュー」「別contextでレビュー」「仕様レビュー」「実装計画レビュー」「実装レビュー」（旧称: gateレビュー・計画レビュー）.
 ---
 
 # Independent Review
@@ -22,13 +22,13 @@ description: >-
 
 共通AGENTS §7の区分に従う。
 
-- **重リスク作業**（公開API、永続化、並行・非同期、認証・security、課金、migration、deploy、広いarchitecture）：仕様レビュー → 計画レビュー → 実装レビュー。仕様と実装計画が1つの短い文書に収まる場合は、仕様と計画のレビューを1回へ統合してよい。
+- **重リスク作業**（公開API、永続化、並行・非同期、認証・security、課金、migration、deploy、広いarchitecture）：仕様レビュー → 実装計画レビュー → 実装レビュー。仕様と実装計画が1つの短い文書に収まる場合は、仕様と計画のレビューを1回へ統合してよい。
 - **通常対象作業**（それ以外のユーザー可視動作、PR化する非自明な変更）：実装レビューのみ。仕様・計画はreviewなしで現在taskの `TASK.md` とactive planへ記録する。
 
 reviewerのreasoning effort既定：
 
 - reviewは検査であり生成ではない。実装と同じ最高設定（例：xhigh）を既定にしない。
-- 仕様・計画レビュー：中位（例：codex `medium`、claude標準effort）。
+- 仕様・実装計画レビュー：中位（例：codex `medium`、claude標準effort）。
 - 実装レビュー：中位を既定とし、重リスク作業だけ高位（`high` 以上）へ上げる。
 - 実装をCodexが行った場合はreviewerへClaudeを、Claudeが行った場合はCodexを優先し、モデル独立性とコストの両立を図る。
 
