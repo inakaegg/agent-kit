@@ -25,12 +25,11 @@ description: >-
 - **重リスク作業**（公開API、永続化、並行・非同期、認証・security、課金、migration、deploy、広いarchitecture）：仕様レビュー → 実装計画レビュー → 実装レビュー。仕様と実装計画が1つの短い文書に収まる場合は、仕様と計画のレビューを1回へ統合してよい。
 - **通常対象作業**（それ以外のユーザー可視動作、PR化する非自明な変更）：実装レビューのみ。仕様・計画はreviewなしで現在taskの `TASK.md` とactive planへ記録する。
 
-reviewerのreasoning effort既定：
+reviewerのモデルとreasoning effort：
 
-- reviewは検査であり生成ではない。実装と同じ最高設定（例：xhigh）を既定にしない。
-- 仕様・実装計画レビュー：中位（例：codex `medium`、claude標準effort）。
-- 実装レビュー：中位を既定とし、重リスク作業だけ高位（`high` 以上）へ上げる。
-- 実装をCodexが行った場合はreviewerへClaudeを、Claudeが行った場合はCodexを優先し、モデル独立性とコストの両立を図る。
+- 担当にできるモデルは agent-settings のキーが決める（重リスク作業 `REVIEW_MODEL_HEAVY`・通常対象作業 `REVIEW_MODEL_DEFAULT`・読みやすさ `REVIEW_MODEL_READABILITY`。書式は `docs/policies/review.md`）。その範囲内で実装担当と別のモデルを優先し、モデル独立性とコストの両立を図る。
+- 設定値が「系統(思考量)」の形で思考量を指定している場合は、その思考量を正本として使う。
+- 設定値に思考量の指定がない場合の既定：仕様・実装計画レビューは中位、実装レビューは中位を既定とし重リスク作業だけ高位へ上げる。reviewは検査であり生成ではないため、指定がない限り実装と同じ最高設定にしない。
 
 ## 1. 独立性
 
