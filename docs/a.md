@@ -1,1 +1,1 @@
-see [gone](../missing.md)
+see [readme](../README.md)
