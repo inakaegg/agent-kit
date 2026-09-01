@@ -182,6 +182,27 @@ kitを除去するときは、ディレクトリを削除する**前に**
   明示許可済みの操作なので対象外です。main直接commitが慣行のリポジトリでは
   `git config --local hooks.allowMainCommits true` または agent-settings（後述）の
   `MAIN_DOC_GUARD=false` を設定します。
+- `pre-commit` は、未pushの履歴を打ち消すcommitも拒否します。対象は、未pushのcommitで
+  追加したファイルの削除と、upstreamの内容への巻き戻しです。commitを重ねる代わりに
+  `git reset --soft` でのまとめ直しを案内します（「同目的の手直しはpush前にまとめる」
+  規則の機械化）。打ち消しの
+  commit対が残ると、gitleaksの規則をすり抜けた秘密情報が履歴に載ったままpushされる経路にも
+  なります。push範囲全体でしか見えない相殺（3commit以上の合成、別セッションが作ったcommitとの
+  相殺）は `pre-push` が最終防衛として止めます。`pre-commit` はupstream未設定のbranchでは
+  比較基準を決められないため検査しません。初回pushは対象外にせず、`pre-push` が送るcommit
+  全体（リモート追跡refから到達できない範囲。追跡refがまだ無いrepoでは到達可能な全履歴）を
+  走査し、その中で追加して削除したパスを止めます。
+  試行の記録として意図的に残す場合は `git config --local hooks.allowNetZeroHistory true`
+  を設定します。読むのはリポジトリ単位の設定だけで、globalに置いても効きません
+  （全リポジトリで一括して切る手段をopt-outに用意しない）。
+  強さは agent-settings（後述）の `SQUASH_GUARD` で選びます。`true` は中止、`warn` は
+  同じ検出内容を警告として出して続行、`false` は無効です。**既定は `warn`** で、
+  誤検知が出ないことを確かめたリポジトリが、そのリポジトリの `agent-settings.env` で
+  `true` にして中止まで有効にします。
+  既知の限界: 相殺を履歴に残さない `--amend` も新規commitと区別できず同様に止まります
+  （`git reset --soft` で対処）。renameは追加と削除に分けて数えるため、範囲内で
+  追加したファイルの `git mv` も打ち消しとして止まります。また merge commitを含む
+  範囲は走査しません。
 - `pre-commit` は続けて、stageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
   commitを拒否します。gitleaksは導入必須で、未導入の環境ではcommit自体を停止します
   （`brew install gitleaks` で導入。誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。
