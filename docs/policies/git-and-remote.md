@@ -32,6 +32,7 @@
 ## 3. push・PR
 
 - push、PR作成・更新は、そのターンの明示許可がある場合だけ行う。
+- 公開repositoryでは、軽微な文書更新も含め、default branchへの取り込みを常にPR経由とする（AGENTS.md §8）。default branchへの直接pushをしない。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成までを許可する。merge、base branchへのpush、public化は含まない。
 - PR作成前に、base/head、title、scope、test、未確認範囲、最新headの独立review結果を確認する。
 - 自分のリポジトリでは `git config --local hooks.runAgentCheck true` を設定し、検証コマンドを `scripts/agent-check.sh` へ集約する。設定したリポジトリでは共有pre-push hookが `fast` モードで実行し、失敗したpushは止まる。opt-inなのは、cloneした他者のリポジトリのスクリプトをpushだけで実行させないためである。
@@ -65,6 +66,9 @@ project方針がない場合：
 - 初回pushは同名remote branchを明示してupstreamを設定する。
 
 ## 7. repository・artifactのvisibility
+
+- 既存repositoryの公開状態は `gh repo view <owner>/<repo> --json visibility` で確認する。確認できない場合は公開として扱う。
+- ユーザーが管理権限を持つ公開repositoryのdefault branchには、branch protection（GitHubではRulesets。PR必須・force push禁止・削除禁止。CIがある場合は必須checkに緑）を設定する。設定はクラウド設定変更にあたるため、実行前に明示許可を得る。設定後は `gh api repos/<owner>/<repo>/rulesets` で実際の内容を再確認する（旧式の `branches/<branch>/protection` APIはRulesetsを返さないため確認に使わない）。
 
 - 新規source repository、container repository、package、bucket、artifact storeはprivateを既定とする。
 - 作成時はvisibilityをdefaultへ任せずprivateを明示する。確認方法が不明なら作成・初回pushを止める。
