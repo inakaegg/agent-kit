@@ -12,6 +12,21 @@ set -u
 zero=0000000000000000000000000000000000000000
 input="$(cat)"
 
+# agent-settings（AGENTS.md §1）の3層からキーを解決する（pre-commitと同じ規約）。
+setting() {
+  _key="$1"; _default="$2"
+  _top="$(git rev-parse --show-toplevel 2>/dev/null)"
+  _kit="$(cd "$(dirname "$0")/.." && pwd -P)"
+  for _f in "$_top/agent-settings.local.env" "$_top/agent-settings.env" "$_kit/agent-settings.env"; do
+    [ -f "$_f" ] || continue
+    if grep -q "^${_key}=" "$_f" 2>/dev/null; then
+      sed -n "s/^${_key}=//p" "$_f" | tail -n 1
+      return 0
+    fi
+  done
+  printf '%s\n' "$_default"
+}
+
 # リポジトリがopt-in（git config --local hooks.runAgentCheck true）している場合だけ、
 # scripts/agent-check.sh（検証コマンドの集約。templates/VERIFICATION.md参照）をfastモードで
 # 実行し、失敗したらpushを止める。手動の検査は忘れられるため実行を機械に持たせる
@@ -47,6 +62,68 @@ run_local_hook() {
   fi
   exit 0
 }
+
+# まとめ忘れガード（最終防衛層。主はpre-commit側）。push範囲を通して見たときだけ
+# 分かる相殺——3commit以上の合成でのnet-zero、別セッション由来のcommitとの相殺——を
+# 検出してpushを中止する。取り消しの2commitが残ると、gitleaksのルールをすり抜けた
+# 秘密情報が履歴に残る経路にもなる。gitleaksの有無に依存しないよう、gitleaks走査より
+# 前に実行する。既知の限界: merge commitの差分は範囲走査に出ないため、mergeを含む
+# 範囲の相殺は検出しない。範囲内で「追加→削除→同一内容で再追加」まで進んだパスも、
+# 範囲の前後で見ると新規追加なので、途中の削除・再追加は検出しない。
+# OFF: agent-settings の SQUASH_GUARD=false（既定 true・fail-closed）。
+# 意図的に残すrepo: git config --local hooks.allowNetZeroHistory true
+run_squash_guard_range() {
+  base="$1"; tip="$2"
+  bad=""
+  oldIFS=$IFS
+  IFS='
+'
+  set -f
+  # パターン1: 範囲内で追加され、同範囲内で削除されたパス（範囲前後のどちらにも存在しない）
+  added="$(git -c core.quotePath=false log --format= --name-only --no-renames --diff-filter=A "$base".."$tip" | grep -v '^$' | sort -u)"
+  deleted="$(git -c core.quotePath=false log --format= --name-only --no-renames --diff-filter=D "$base".."$tip" | grep -v '^$' | sort -u)"
+  for f in $(printf '%s\n%s\n' "$added" "$deleted" | grep -v '^$' | sort | uniq -d); do
+    git cat-file -e "$base:$f" 2>/dev/null && continue
+    git cat-file -e "$tip:$f" 2>/dev/null && continue
+    bad="$bad  追加→削除: $f
+"
+  done
+  # パターン2: 範囲内で2commit以上が触ったのに、範囲前後で内容が同一のパス
+  for f in $(git -c core.quotePath=false log --format= --name-only --no-renames "$base".."$tip" | grep -v '^$' | sort | uniq -d); do
+    git cat-file -e "$base:$f" 2>/dev/null || continue
+    if git diff --quiet "$base" "$tip" -- "$f" 2>/dev/null; then
+      bad="$bad  相殺: ${f}（複数commitで変更したが内容は元どおり）
+"
+    fi
+  done
+  set +f
+  IFS=$oldIFS
+  [ -z "$bad" ] && return 0
+  {
+    echo ""
+    echo "pre-push: push範囲内で互いを打ち消すcommitがあるため、pushを中止しました。"
+    printf '%s' "$bad"
+    echo "対応:"
+    echo "  - 未push範囲なので、該当commitをまとめ直してから再pushする（reset --soft / rebase）"
+    echo "  - 試行の記録として意図的に残す場合: git config --local hooks.allowNetZeroHistory true"
+    echo "  - ガード全体のOFFは agent-settings.env の SQUASH_GUARD=false（AGENTS.md §1）"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+}
+
+if [ "$(setting SQUASH_GUARD true)" != "false" ] \
+  && [ "$(git config --type=bool --default=false hooks.allowNetZeroHistory)" != "true" ]; then
+  while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+    [ -z "${local_ref:-}" ] && continue
+    [ "$local_sha" = "$zero" ] && continue          # branch削除
+    [ "$remote_sha" = "$zero" ] && continue         # 初回push: 基準点がなく相殺を定義できない
+    git cat-file -e "$remote_sha" 2>/dev/null || continue  # 基準点がローカルで解決できない
+    run_squash_guard_range "$remote_sha" "$local_sha"
+  done <<EOF
+$input
+EOF
+fi
 
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-push: gitleaks未導入のため秘密情報の走査をスキップしました（brew install gitleaks で導入）" >&2

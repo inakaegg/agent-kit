@@ -1,0 +1,40 @@
+import os
+import subprocess
+import unittest
+from pathlib import Path
+
+KIT_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = KIT_ROOT / "scripts" / "test-squash-guard.sh"
+
+DROP = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX")
+
+
+def clean_env() -> dict:
+    # pre-push hookの中から（hooks.runAgentCheck経由で）実行されても、gitが渡すGIT_DIR等に
+    # 引きずられず一時リポジトリを見るようにする（tests/test_pre_push_hook.py と同じ扱い）。
+    # fixture側でもunsetしているが、入口でも落として二重に守る。
+    return {k: v for k, v in os.environ.items() if k not in DROP}
+
+
+class SquashGuardScenarios(unittest.TestCase):
+    """squash guardの再現テスト一式をshellのfixture経由で実行する。
+
+    ケース本体はscripts/test-squash-guard.shにある（一時repoでの
+    commit/push操作の連なりはshellのほうが読み書きしやすいため）。
+    ここはCI（unittest discover）から確実に走らせるための入口。
+    """
+
+    def test_scenarios(self):
+        proc = subprocess.run(
+            ["sh", str(SCRIPT)], capture_output=True, text=True, timeout=300,
+            env=clean_env(),
+        )
+        self.assertEqual(
+            proc.returncode, 0,
+            "squash guardの再現テストが失敗:\n" + proc.stdout + proc.stderr,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

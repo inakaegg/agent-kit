@@ -182,6 +182,19 @@ kitを除去するときは、ディレクトリを削除する**前に**
   明示許可済みの操作なので対象外です。main直接commitが慣行のリポジトリでは
   `git config --local hooks.allowMainCommits true` または agent-settings（後述）の
   `MAIN_DOC_GUARD=false` を設定します。
+- `pre-commit` は、未pushの履歴を打ち消すcommitも拒否します。対象は、未pushのcommitで
+  追加したファイルの削除と、upstreamの内容への巻き戻しです。commitを重ねる代わりに
+  `git reset --soft` でのまとめ直しを案内します（「同目的の手直しはpush前にまとめる」
+  規則の機械化）。打ち消しの
+  commit対が残ると、gitleaksの規則をすり抜けた秘密情報が履歴に載ったままpushされる経路にも
+  なります。push範囲全体でしか見えない相殺（3commit以上の合成、別セッションが作ったcommitとの
+  相殺）は `pre-push` が最終防衛として止めます。upstream未設定のbranchと初回pushは対象外です。
+  試行の記録として意図的に残す場合は `hooks.allowNetZeroHistory` を `true` にします。
+  他のhookの設定と同じくgitの通常の探索順で読むため、`git config --local` なら
+  そのリポジトリだけ、globalに置けば全リポジトリでガードが外れます。
+  ガード全体を切る場合は agent-settings（後述）の `SQUASH_GUARD=false` を設定します。
+  既知の限界: 相殺を履歴に残さない `--amend` も新規commitと区別できず同様に止まります
+  （`git reset --soft` で対処）。また merge commitを含む範囲は走査しません。
 - `pre-commit` は続けて、stageされた内容をgitleaksで走査し、秘密情報らしき値を検出したら
   commitを拒否します。gitleaksは導入必須で、未導入の環境ではcommit自体を停止します
   （`brew install gitleaks` で導入。誤検知は `.gitleaksignore` へfingerprintを追加して抑止します）。

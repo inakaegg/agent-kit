@@ -268,8 +268,79 @@ run_gitleaks() {
   fi
 }
 
+# まとめ忘れガード。stageされた変更が未push範囲（@{upstream}..HEAD）のcommitを
+# 打ち消すなら、取り消しcommitを重ねず履歴をまとめ直すよう促して中止する
+# （「未pushの同目的の手直しはpush前にまとめる」運用の機械化）。
+# 取り消しの2commitが残ると、push時にgitleaksをすり抜けた秘密情報が履歴に残る経路にもなる。
+# ON/OFF: agent-settings の SQUASH_GUARD（既定 true）。
+# 試行の記録として意図的に残すrepo: git config --local hooks.allowNetZeroHistory true
+run_squash_guard() {
+  [ "$(setting SQUASH_GUARD true)" = "false" ] && return 0
+  if [ "$(git config --type=bool --default=false hooks.allowNetZeroHistory)" = "true" ]; then
+    return 0
+  fi
+  # merge・cherry-pick・revertの仕上げcommitは、打ち消しに見えても明示的に開始した
+  # 正規の操作なので対象外（run_main_guardのMERGE_HEAD扱いと同じ）。
+  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  for marker in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
+    [ -e "$git_dir/$marker" ] && return 0
+  done
+  # upstream未設定（初回push前のbranch等）は未push範囲を定義できないためスキップする。
+  # 既知の限界: 比較基準はupstream tipのため、upstreamが先行して分岐している間は
+  # 「upstream側と同じ内容へ揃えるstage」を巻き戻しと誤検知し得る（opt-outで回避）。
+  # また `git commit --amend` はHEADを置き換えるので相殺は履歴に残らないが、
+  # hookからは新規commitと区別できないため同様に止まる（reset --soft で回避する）。
+  upstream="$(git rev-parse --verify --quiet '@{upstream}' 2>/dev/null)" || return 0
+  [ -n "$upstream" ] || return 0
+  [ "$(git rev-list --count "$upstream"..HEAD 2>/dev/null || echo 0)" -gt 0 ] || return 0
+
+  bad=""
+  oldIFS=$IFS
+  IFS='
+'
+  set -f
+  # パターン1: stageで削除されるファイルが、未push範囲で追加されたもの
+  # （upstreamに存在しない＝追加も削除も未pushで、まとめれば履歴から消える）
+  for f in $(git -c core.quotePath=false diff --cached --name-only --no-renames --diff-filter=D); do
+    if ! git cat-file -e "$upstream:$f" 2>/dev/null; then
+      added_in="$(git -c core.quotePath=false log --format=%h --no-renames --diff-filter=A "$upstream"..HEAD -- "$f" | tr '\n' ' ')"
+      if [ -n "$added_in" ]; then
+        bad="$bad  削除: ${f}（未push commit ${added_in}で追加）
+"
+      fi
+    fi
+  done
+  # パターン2: stage後の内容がupstream時点と同一に戻るファイル（未push範囲で触っている場合）。
+  # 「未push commitで削除→同一内容で復元」はHEAD比でAになるため、AMの両方を見る。
+  for f in $(git -c core.quotePath=false diff --cached --name-only --no-renames --diff-filter=AM); do
+    if git cat-file -e "$upstream:$f" 2>/dev/null; then
+      if git diff --quiet --cached "$upstream" -- "$f" 2>/dev/null; then
+        touched_in="$(git -c core.quotePath=false log --format=%h --no-renames "$upstream"..HEAD -- "$f" | tr '\n' ' ')"
+        if [ -n "$touched_in" ]; then
+          bad="$bad  巻き戻し: ${f}（未push commit ${touched_in}の変更を打ち消し）
+"
+        fi
+      fi
+    fi
+  done
+  set +f
+  IFS=$oldIFS
+  [ -n "$bad" ] || return 0
+  {
+    echo "pre-commit: 未pushのcommitを打ち消す変更のため、commitを中止しました。"
+    printf '%s' "$bad"
+    echo "対応:"
+    echo "  - 該当commitまで git reset --soft で戻り、取り消し後の姿でcommitし直す（共通AGENTS.md §8）"
+    echo "  - 試行の記録として意図的に履歴へ残す場合: git config --local hooks.allowNetZeroHistory true"
+    echo "  - ガード全体のOFFは agent-settings.env の SQUASH_GUARD=false（AGENTS.md §1）"
+    echo "  - --no-verify での回避は禁止（共通AGENTS.md §5）"
+  } >&2
+  exit 1
+}
+
 run_branch_guard
 run_main_guard
+run_squash_guard
 run_gitleaks
 run_textlint
 run_linkcheck
