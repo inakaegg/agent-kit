@@ -10,8 +10,15 @@ COMMIT_MSG_HOOK = KIT_ROOT / "git-hooks" / "commit-msg"
 PRE_COMMIT_HOOK = KIT_ROOT / "git-hooks" / "pre-commit"
 
 
+# git hookの中から実行されると、gitがhookへ渡すGIT_DIR等が子プロセスへ継承され、
+# -C で指定した一時repoではなく呼び出し元のrepoを操作してしまう。gitを呼ぶ前に外す
+# （scripts/validate-kit.py の GIT_ENV_KEYS_TO_DROP と同じ一覧）。
+DROP = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_PREFIX")
+
+
 def clean_env() -> dict:
-    env = dict(os.environ)
+    env = {k: v for k, v in os.environ.items() if k not in DROP}
     env["GIT_CONFIG_GLOBAL"] = "/dev/null"
     env["GIT_CONFIG_SYSTEM"] = "/dev/null"
     return env
