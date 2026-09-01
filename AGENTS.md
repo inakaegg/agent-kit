@@ -91,8 +91,10 @@
 ## 8. Gitとローカルcommit
 
 - 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。
-- 誤字修正など、コードや製品挙動を変えない軽微な文書更新は、branchとstatusを確認し、他作業の差分を巻き込まない場合に限り `main` のcheckoutで行ってよい。
-- 上のどちらに該当するか判断できない場合は、編集を始める前にユーザーへ確認する。
+- 公開repositoryでは、誤字修正などの軽微な文書更新も含め、`main`（master等のdefault branch）への取り込みを常にPR経由とし、mainへ直接commit・pushしない。軽微な文書更新もtask branchを作って編集・commitする（別worktreeは不要）。push・PR作成は§3のとおり明示許可を得てから行い、許可がない間はbranchへのcommitと報告に留める。公開か確認できないrepositoryは公開として扱い、非公開でも他者と共有するrepositoryは公開と同じ扱いとする。
+- ユーザーが管理権限を持つ公開repositoryには、branch protectionを設定して上記を機械的にも強制する。設定・変更の実行は§3のとおり明示許可を得て行い、protectionの内容と公開状態の確認手順は `docs/policies/git-and-remote.md` に従う。
+- 他者と共有しない非公開repositoryでは従来どおり、軽微な文書更新に限り、branchとstatusを確認し他作業の差分を巻き込まない場合だけ `main` のcheckoutで行ってよい。
+- コード・製品挙動の変更か軽微な文書更新か、またはrepositoryの公開・共有の区分を判断できない場合は、編集を始める前にユーザーへ確認する。
 - 調査とread-only操作は現在のcheckoutで行ってよい。
 - 編集・commit前に、branch、status、対象diffを確認する。意図しない既存差分、untracked file、別作業を巻き込まない。
 - 実装依頼に基づくローカルcommitは、許可範囲の変更だけ、必要な検査とレビューの通過、1commit 1目的、秘密情報・大容量生成物・環境依存絶対pathなし、を満たす場合だけ行う。
@@ -147,6 +149,6 @@
 
 繰り返す手順はSkillへ、project固有事項はprojectの `AGENTS.md` へ、今回だけの条件はtask契約へ移す。個人環境はlocal policyへ、機械判定可能な規則はtoolingへ移す。本共通ファイルへの追加・変更は、原則としてユーザー確認を得て行う。
 
-本ファイルやprojectの規則ファイルを編集したら、その変更を未commitのまま放置せず適宜commitする（分け方は§8の1commit 1目的に従う）。編集対象ファイルに他セッション由来の未commit差分があっても、規則変更のcommitを保留する理由にしない。
+本ファイルやprojectの規則ファイルを編集したら、その変更を未commitのまま放置せず適宜commitする（分け方は§8の1commit 1目的に従う。公開repositoryでは§8のとおりbranchへcommitし、mainへの取り込みはPR経由とする）。編集対象ファイルに他セッション由来の未commit差分があっても、規則変更のcommitを保留する理由にしない。
 
 逆方向も同じく禁止する。上の5条件を満たす一般規則（全projectに通用する作法・権限境界・品質基準）を、個別projectの `AGENTS.md` へ書かない。projectのAGENTSへ書くのはそのproject固有の差分だけとし、一般規則が必要になったら本ファイルへの追加をユーザーへ提案する。迷う場合は `instruction-placement.md` の判定順に従う。
