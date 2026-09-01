@@ -1,3 +1,1 @@
-```
-[e](../missing.md)
-```
+see [gone](../missing.md)
