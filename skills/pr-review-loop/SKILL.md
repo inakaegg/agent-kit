@@ -40,6 +40,7 @@ _ai/pr-review/<PR番号>/
 - 古いcommitへのcommentは、現在codeにも該当するか再確認する。
 - silence、rate limit、timeout、botのmarketing section、walkthrough summaryをapprovalまたは指摘として数えない。
 - 特定bot名やworkflow名をhardcodeせず、repositoryからdiscoverする。
+- botが利用上限・障害で止まっている場合（「usage limit」等のcommentだけでreviewが無い）は、指摘ゼロと数えない。再開時刻を確認してiteration記録へ残し、再開時刻に再依頼（`@<bot> review` 等のcomment投稿。remote writeなので許可範囲に従い、無ければ記録と報告に留める）する。再開時刻が判明している停止は待機として扱い、本Skill §7の「review signalを返さない」停止条件に当てはめない。待つあいだは他の作業へ戻ってよい。
 
 ## 3. 指摘の仕分け
 
