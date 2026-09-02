@@ -32,7 +32,7 @@
 - 質問・意見・調査・原因確認の依頼では、明示されない限りファイルを変更しない。問題を発見した場合は、根拠と修正案を報告して止める。
 - 実装・修正・更新が明示された場合は、対象ファイルの変更と、§8を満たしたその作業分の**ローカルcommit**を行ってよい（`AUTO_COMMIT=false` のときはcommitせず変更のみ行い、commitはユーザーへ委ねる）。ユーザーがcommit不要と指示した場合は従う。
 - read-onlyの `git status`、`git diff`、`git log`、検索、テスト実行は必要に応じて行ってよい。
-- push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。
+- push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。例外として `AUTO_MERGE_PRIVATE=true` のとき、他者と共有しない非公開repositoryでは、必要なレビューをすべて通したtask branchのdefault branchへのローカルmerge（`--no-ff`）を許可なく行ってよい。pushとPRはこの例外に含めない。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成を許可するが、merge、base branchへのpush、public化を許可しない。
 - 新規のrepository、package、container、bucket等はprivateを既定とする。public化は対象と範囲を明示した許可がある場合だけ行う。
 - クラウド上の構成はIaCを基本とする。Terraform等のコードによる宣言をリポジトリ内の正本とし、dashboardやCLIの手作業だけで作った資産を残さない。手作業が避けられない場合は、対象と理由を記録し、後からIaCへ取り込む。IaCの適用（apply）はクラウド設定変更にあたるため、前項までと同じく明示許可を必要とする。
@@ -90,7 +90,7 @@
 
 ## 8. Gitとローカルcommit
 
-- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。
+- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。merge済みのworktreeは `AUTO_PRUNE_WORKTREES=true` なら許可なく削除してよい（未commit差分があるものは除く）。branchはgraphでつながりを見るために残し、削除は明示許可がある場合だけ行う。
 - 公開repositoryでは、誤字修正などの軽微な文書更新も含め、`main`（master等のdefault branch）への取り込みを常にPR経由とし、mainへ直接commit・pushしない。軽微な文書更新もtask branchを作って編集・commitする（別worktreeは不要）。push・PR作成は§3のとおり明示許可を得てから行い、許可がない間はbranchへのcommitと報告に留める。公開か確認できないrepositoryは公開として扱い、非公開でも他者と共有するrepositoryは公開と同じ扱いとする。
 - ユーザーが管理権限を持つ公開repositoryには、branch protectionを設定して上記を機械的にも強制する。設定・変更の実行は§3のとおり明示許可を得て行い、protectionの内容と公開状態の確認手順は `docs/policies/git-and-remote.md` に従う。
 - 他者と共有しない非公開repositoryでは従来どおり、軽微な文書更新に限り、branchとstatusを確認し他作業の差分を巻き込まない場合だけ `main` のcheckoutで行ってよい。

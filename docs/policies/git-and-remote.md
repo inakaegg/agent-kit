@@ -50,7 +50,7 @@
 
 ## 5. merge・履歴改変
 
-- mergeは、そのターンの明示依頼、required CI成功、最新headへのreview完了、未確認範囲の確認がある場合だけ行う。
+- mergeは、そのターンの明示依頼、required CI成功、最新headへのreview完了、未確認範囲の確認がある場合だけ行う。`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、明示依頼の代わりに「必要なレビューがすべてLGTM」を条件にローカルmergeしてよい（`AGENTS.md` §3）。
 - project規則がない通常のGitHub開発では、`feature branch → PR → CI → merge commit` を既定とする。squash mergeはbranchとbaseの繋がりをgraphから消し、取り込み済み判定を壊すため使わない。ユーザーが明示指示した場合だけ例外とする。
 - localでfeature branchをbaseへ取り込む場合は `git merge --no-ff` を使い、fast-forwardでmerge commitを省略しない。
 - shared historyのrebase、squash、force push、base branch直接pushは行わない。明示合意とteam方針がある場合だけ例外とする。
@@ -62,6 +62,7 @@
 project方針がない場合：
 
 - 新しいworktreeはrepository直下の `.worktrees/` に置き、`.gitignore`へ追加する。
+- merge済みのworktreeは `git worktree remove` で片づける（`AUTO_PRUNE_WORKTREES=true` なら許可不要。`AGENTS.md` §8）。branchは残す。
 - remote-tracking branchからfeature branchを作るときはupstreamを誤設定しない。作成後に `git status -sb` または `git branch -vv` で追跡先を確認する。
 - 初回pushは同名remote branchを明示してupstreamを設定する。
 
