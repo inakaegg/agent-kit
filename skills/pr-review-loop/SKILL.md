@@ -64,6 +64,8 @@ _ai/tasks/<開始日-slug>/reviews/pr-<PR番号>/
 
 ## 4. 修正iteration
 
+修正はそのターンの許可範囲で行う。「PRを作成して」だけの許可はpushとPR作成までで、指摘への修正を含まない。修正の許可がなければ、仕分け結果を報告して止める。Draft PRでは状態の確認と記録だけ行い、修正iterationへ進まない。
+
 1. MUST-FIXを、同型箇所の横断検索後にまとめて修正
 2. 必要なregression testを追加
 3. projectのtargeted checks
@@ -90,7 +92,7 @@ unrelated CI failureも無視せず、変更前から失敗していたか・bas
 - 対応が必要な全指摘へFIX / RECORD / REFUTE / FOLLOW-UP / BLOCKEDの判断がある
 - required CIがgreen、または明示された環境blockだけが残る
 - projectが要求するか、ユーザーが依頼したreview signalがlatest headに対して完了
-- 履歴を共有しない別セッションのreviewにも修正必須の指摘がない（`INDEPENDENT_REVIEW=false` の通常対象作業ではこの条件を要求しない。重リスク作業は常に要求する）
+- 履歴を共有しない別セッションのreviewにも修正必須の指摘がない（軽微変更、および `INDEPENDENT_REVIEW=false` の通常対象作業ではこの条件を要求しない。重リスク作業は常に要求する）
 
 botのLGTMだけで自分のreviewを省略しない。逆に、false positiveを無理に修正してbot全員を満足させる必要もないが、反証を残す。
 

@@ -86,7 +86,7 @@
 - レビュー担当は、その成果物を作っていない、履歴を共有しない別セッションを必須とし、可能なら別のtool/modelを使う。どのモデルを担当にするかは設定キーで決める（重リスク作業は `REVIEW_MODEL_HEAVY`、通常対象作業は `REVIEW_MODEL_DEFAULT`。書式と選び方は `docs/policies/review.md`）。**`REVIEW_REQUIRE_OTHER_LINEAGE=true` のあいだ、重リスク作業のレビュー担当は実装担当と別系統のモデルを必須とする**。同系統での代替（例: opus実装をopusがレビュー）は一時的なfallbackとしても認めない。設定が示す担当が使えない間はその段階のレビューを保留し、待つか・設定を変えるか・中止かの判断をユーザーへ求める。**これらのモデルキーの値を変えてよいのは、ユーザーの明示指示があるときだけとする（エージェントが自分の判断で緩めない）。** 緩めた場合は、変えたキー・値・理由をタスクの契約へ書き、標準の担当が使えるようになった時点で該当レビューをやり直す。
 - 人間向け文書の新規作成と本文の実質更新は、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする（`READABILITY_REVIEW=false` なら不要）。誤字修正等の軽微変更は対象外。
 - 指摘は**修正 / 記録のみ / 誤検知として反証**へ仕分け、裏付けのない指摘を修正必須として扱わない。指摘の件数上限、レビューの回数、修正必須が残った場合の扱いは `docs/policies/review.md` に従う。
-- PRを作成したら、その場で `$pr-review-loop` に入り、最新headに対するbot review・CI・required checksを収束条件まで回す（botが利用上限等で止まっている場合の扱いも同Skillに従う）。軽微変更のPRは、CIとprojectが要求するreview signalの確認だけでよく、独立レビューは要求しない。mergeは§3のとおり明示許可を必要とする（`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、必要なレビューがすべてLGTMなら許可不要）。
+- review-readyのPRを作成したら、その場で `$pr-review-loop` に入り、最新headに対するbot review・CI・required checksを収束条件まで回す（botが利用上限等で止まっている場合の扱いも同Skillに従う。Draftでは状態の確認と記録に留める）。軽微変更のPRは、CIとprojectが要求するreview signalの確認だけでよく、独立レビューは要求しない。指摘への修正は§3の許可範囲で行い、そのターンに修正の許可がなければ指摘を報告して止める。mergeは§3のとおり明示許可を必要とする（`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、必要なレビューがすべてLGTMなら許可不要）。
 
 ## 8. Gitとローカルcommit
 
