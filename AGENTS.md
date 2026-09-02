@@ -9,7 +9,7 @@
 - 変更対象へ適用される、ルートから対象ディレクトリまでの `AGENTS.md`、`CLAUDE.md`、その他の明示的な指示を読む。
 - 本文中の `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は、agent-kit（本ファイルの実体がある場所）内を指す。symlink経由で読んでいる場合は実体の場所を辿る。作業対象プロジェクトの `docs/` とは別物である。
 - 上位の指示を下位の指示が暗黙に弱めてはならない。矛盾があり、結果が実質的に変わる場合は推測で選ばず停止して報告する。
-- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。
+- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
 - 本ファイルへ、現在のタスクの仕様、試行履歴、技術スタック固有の細則、長い操作手順を追加しない。
 
 ## 2. 情報の正本

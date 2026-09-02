@@ -110,7 +110,7 @@ botのLGTMだけで自分のreviewを省略しない。逆に、false positive�
 
 ## 8. merge前
 
-mergeを明示依頼された場合のみ：
+mergeが許可されている場合のみ（明示依頼、または `AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryで必要なレビューがすべてLGTM。共通AGENTS §3）：
 
 1. latest head SHA再取得
 2. required checks再取得
