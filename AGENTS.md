@@ -90,7 +90,7 @@
 
 ## 8. Gitとローカルcommit
 
-- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。merge済みのworktreeは `AUTO_PRUNE_WORKTREES=true` なら許可なく削除してよい（未commit差分があるものは除く）。branchはgraphでつながりを見るために残し、削除は明示許可がある場合だけ行う。
+- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。merge済みのworktreeは `AUTO_PRUNE_WORKTREES=true` なら許可なく削除してよい（未commit差分・ignoredなローカルファイルが残るものは除く。確認手順は `docs/policies/git-and-remote.md`）。branchはgraphでつながりを見るために残し、削除は明示許可がある場合だけ行う。
 - 公開repositoryでは、誤字修正などの軽微な文書更新も含め、`main`（master等のdefault branch）への取り込みを常にPR経由とし、mainへ直接commit・pushしない。軽微な文書更新もtask branchを作って編集・commitする（別worktreeは不要）。push・PR作成は§3のとおり明示許可を得てから行い、許可がない間はbranchへのcommitと報告に留める。公開か確認できないrepositoryは公開として扱い、非公開でも他者と共有するrepositoryは公開と同じ扱いとする。
 - ユーザーが管理権限を持つ公開repositoryには、branch protectionを設定して上記を機械的にも強制する。設定・変更の実行は§3のとおり明示許可を得て行い、protectionの内容と公開状態の確認手順は `docs/policies/git-and-remote.md` に従う。
 - 他者と共有しない非公開repositoryでは従来どおり、軽微な文書更新に限り、branchとstatusを確認し他作業の差分を巻き込まない場合だけ `main` のcheckoutで行ってよい。
