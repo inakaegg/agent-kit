@@ -7,6 +7,3 @@ rules:
   - expected: フォールバック
     pattern: 縮退
     prh: fallbackの直訳。読者に伝わらない
-  - expected: 起動
-    pattern: 起床
-    prh: wakeの直訳。プロセスやエージェントには「起動」「再開」を使う
