@@ -24,10 +24,10 @@ description: >-
 - reviewer/botの種類とreview signal
 - local working treeとbranch
 
-state directory：
+state directory（現在のtask directory配下。共通AGENTS §2 の `_ai/` 構成に従う）：
 
 ```text
-_ai/pr-review/<PR番号>/
+_ai/tasks/<開始日-slug>/reviews/pr-<PR番号>/
 ```
 
 各iterationに、head SHA、指摘、仕分け結果、変更、checks、push/review signalをJSONまたはMarkdownで残す。
@@ -90,7 +90,7 @@ unrelated CI failureも無視せず、変更前から失敗していたか・bas
 - 対応が必要な全指摘へFIX / RECORD / REFUTE / FOLLOW-UP / BLOCKEDの判断がある
 - required CIがgreen、または明示された環境blockだけが残る
 - projectが要求するか、ユーザーが依頼したreview signalがlatest headに対して完了
-- 履歴を共有しない別セッションのreviewにも修正必須の指摘がない
+- 履歴を共有しない別セッションのreviewにも修正必須の指摘がない（`INDEPENDENT_REVIEW=false` の通常対象作業ではこの条件を要求しない。重リスク作業は常に要求する）
 
 botのLGTMだけで自分のreviewを省略しない。逆に、false positiveを無理に修正してbot全員を満足させる必要もないが、反証を残す。
 
