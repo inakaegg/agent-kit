@@ -258,7 +258,7 @@ kitを除去するときは、ディレクトリを削除する**前に**
 
 ### 設定トグル（agent-settings）
 
-上記hookの一部と、`AGENTS.md` の一部の作業規則（自動commit、worktree必須、レビューと
+上記hookの一部と、`AGENTS.md`・`CLAUDE.md` の一部の作業規則（自動commit、worktree必須、レビューと
 その担当モデル、CLI先行）は、`agent-settings.env` でリポジトリごとに切り替えられます。
 多くはON/OFFですが、commit件名の言語順や、レビュー・執筆の担当モデル
 （`REVIEW_MODEL_*`・`WRITING_MODEL_DEEP`）のように固有の値を取るキーもあります。
