@@ -258,7 +258,7 @@ kitを除去するときは、ディレクトリを削除する**前に**
 
 ### 設定トグル（agent-settings）
 
-上記hookの一部と、`AGENTS.md` の一部の作業規則（自動commit、worktree必須、レビューと
+上記hookの一部と、`AGENTS.md`・`CLAUDE.md` の一部の作業規則（自動commit、worktree必須、レビューと
 その担当モデル、CLI先行）は、`agent-settings.env` でリポジトリごとに切り替えられます。
 多くはON/OFFですが、commit件名の言語順や、レビュー・執筆の担当モデル
 （`REVIEW_MODEL_*`・`WRITING_MODEL_DEEP`）のように固有の値を取るキーもあります。
@@ -269,7 +269,7 @@ kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-setting
 切り替えに使う）の順です。ただし担当モデルのキー（`REVIEW_MODEL_*`・`REVIEW_REQUIRE_OTHER_LINEAGE`・
 `WRITING_MODEL_DEEP` の5キー）の緩和は、痕跡が残るようgit管理下のenv側で行います。書式は `KEY=value` の行だけで、shellとしてsourceせず行から値を
 読み取るため、空白や括弧を含む値も書けます。キーと既定値の一覧は
-kitの `agent-settings.env`（コメント付き）にあり、トグル対象の各規則は `AGENTS.md` の
+kitの `agent-settings.env`（コメント付き）にあり、トグル対象の各規則は `AGENTS.md`（Claude Code固有のものは `CLAUDE.md`）の
 該当箇所にキー名を併記しています（解決の仕組みは `AGENTS.md` §1）。権限境界と
 証拠系の禁止事項（`--no-verify` 禁止等）は意図的にトグル化していません。唯一の
 例外が `AUTO_MERGE_PRIVATE`（既定はon）で、他者と共有しない非公開repositoryに
