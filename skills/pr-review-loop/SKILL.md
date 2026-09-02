@@ -89,7 +89,7 @@ unrelated CI failureも無視せず、変更前から失敗していたか・bas
 - latest headに未解決MUST-FIXがない
 - 対応が必要な全指摘へFIX / RECORD / REFUTE / FOLLOW-UP / BLOCKEDの判断がある
 - required CIがgreen、または明示された環境blockだけが残る
-- projectが要求するreview signalがlatest headに対して完了
+- projectが要求するか、ユーザーが依頼したreview signalがlatest headに対して完了
 - 履歴を共有しない別セッションのreviewにも修正必須の指摘がない
 
 botのLGTMだけで自分のreviewを省略しない。逆に、false positiveを無理に修正してbot全員を満足させる必要もないが、反証を残す。
@@ -103,7 +103,7 @@ botのLGTMだけで自分のreviewを省略しない。逆に、false positive�
 - 同じ指摘が理由を変えず反復
 - reviewer同士が解消不能に矛盾
 - 2iteration連続で新しい実質的改善がない
-- CI/serviceがreview signalを返さない
+- CI/serviceがreview signalを返さない（queued・runningの実行中は完了まで待つ。待ちの上限は停止中botと同じ24時間で、超えたら状態を記録して人間判断へ戻す）
 - scopeが元PRから大きく逸脱
 - 未許可のbreaking change、migration、cost、remote operationが必要
 
