@@ -63,7 +63,7 @@ project方針がない場合：
 
 - 新しいworktreeはrepository直下の `.worktrees/` に置き、`.gitignore`へ追加する。
 - merge済みのworktreeは `git worktree remove` で片づける（`AUTO_PRUNE_WORKTREES=true` なら許可不要。`AGENTS.md` §8）。branchは残す。
-- 削除前に `git -C <worktree> status --porcelain --ignored` を実行し、出力があれば削除しない。`git worktree remove` は `--force` なしでもignoredな未追跡ファイル（`.env`、生成物など）ごとdirectoryを消すため、`git status -sb` がcleanに見えても安全とは限らない。消してよいかはユーザーへ確認する。
+- 削除前に `git -C <worktree> status --porcelain --ignored` を実行する。出力が無ければ前項のとおり許可なく削除してよい。出力があれば削除せず、消してよいかをユーザーへ確認する。`git worktree remove` は `--force` なしでもignoredな未追跡ファイル（`.env`、生成物など）ごとdirectoryを消すため、`git status -sb` がcleanに見えても安全とは限らない。
 - remote-tracking branchからfeature branchを作るときはupstreamを誤設定しない。作成後に `git status -sb` または `git branch -vv` で追跡先を確認する。
 - 初回pushは同名remote branchを明示してupstreamを設定する。
 
