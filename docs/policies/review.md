@@ -41,4 +41,4 @@
 
 ## GitHub上の反復
 
-GitHub bot・CIを含む反復は `$pr-review-loop` に従う。最新head、対応が必要な全指摘、required CIを確認し、沈黙・rate limit・経過時間を承認とみなさない。最大5回で停止する。この回数は各段階のローカルレビューの回数とは別に数える。mergeは常に明示許可を必要とする。
+GitHub bot・CIを含む反復は `$pr-review-loop` に従う。最新head、対応が必要な全指摘、required CIを確認し、沈黙・rate limit・経過時間を承認とみなさない。最大5回で停止する。この回数は各段階のローカルレビューの回数とは別に数える。mergeは `AGENTS.md` §3のとおり明示許可を必要とする（`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、必要なレビューがすべてLGTMなら許可不要）。
