@@ -9,7 +9,7 @@
 - 変更対象へ適用される、ルートから対象ディレクトリまでの `AGENTS.md`、`CLAUDE.md`、その他の明示的な指示を読む。
 - 本文中の `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は、agent-kit（本ファイルの実体がある場所）内を指す。symlink経由で読んでいる場合は実体の場所を辿る。作業対象プロジェクトの `docs/` とは別物である。
 - 上位の指示を下位の指示が暗黙に弱めてはならない。矛盾があり、結果が実質的に変わる場合は推測で選ばず停止して報告する。
-- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。
+- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
 - 本ファイルへ、現在のタスクの仕様、試行履歴、技術スタック固有の細則、長い操作手順を追加しない。
 
 ## 2. 情報の正本
@@ -32,7 +32,7 @@
 - 質問・意見・調査・原因確認の依頼では、明示されない限りファイルを変更しない。問題を発見した場合は、根拠と修正案を報告して止める。
 - 実装・修正・更新が明示された場合は、対象ファイルの変更と、§8を満たしたその作業分の**ローカルcommit**を行ってよい（`AUTO_COMMIT=false` のときはcommitせず変更のみ行い、commitはユーザーへ委ねる）。ユーザーがcommit不要と指示した場合は従う。
 - read-onlyの `git status`、`git diff`、`git log`、検索、テスト実行は必要に応じて行ってよい。
-- push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。
+- push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。例外として `AUTO_MERGE_PRIVATE=true` のとき、他者と共有しない非公開repositoryでは、必要なレビューをすべて通したtask branchのdefault branchへのローカルmerge（`--no-ff`）を許可なく行ってよい。pushとPRはこの例外に含めない。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成を許可するが、merge、base branchへのpush、public化を許可しない。
 - 新規のrepository、package、container、bucket等はprivateを既定とする。public化は対象と範囲を明示した許可がある場合だけ行う。
 - クラウド上の構成はIaCを基本とする。Terraform等のコードによる宣言をリポジトリ内の正本とし、dashboardやCLIの手作業だけで作った資産を残さない。手作業が避けられない場合は、対象と理由を記録し、後からIaCへ取り込む。IaCの適用（apply）はクラウド設定変更にあたるため、前項までと同じく明示許可を必要とする。
@@ -86,11 +86,11 @@
 - レビュー担当は、その成果物を作っていない、履歴を共有しない別セッションを必須とし、可能なら別のtool/modelを使う。どのモデルを担当にするかは設定キーで決める（重リスク作業は `REVIEW_MODEL_HEAVY`、通常対象作業は `REVIEW_MODEL_DEFAULT`。書式と選び方は `docs/policies/review.md`）。**`REVIEW_REQUIRE_OTHER_LINEAGE=true` のあいだ、重リスク作業のレビュー担当は実装担当と別系統のモデルを必須とする**。同系統での代替（例: opus実装をopusがレビュー）は一時的なfallbackとしても認めない。設定が示す担当が使えない間はその段階のレビューを保留し、待つか・設定を変えるか・中止かの判断をユーザーへ求める。**これらのモデルキーの値を変えてよいのは、ユーザーの明示指示があるときだけとする（エージェントが自分の判断で緩めない）。** 緩めた場合は、変えたキー・値・理由をタスクの契約へ書き、標準の担当が使えるようになった時点で該当レビューをやり直す。
 - 人間向け文書の新規作成と本文の実質更新は、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする（`READABILITY_REVIEW=false` なら不要）。誤字修正等の軽微変更は対象外。
 - 指摘は**修正 / 記録のみ / 誤検知として反証**へ仕分け、裏付けのない指摘を修正必須として扱わない。指摘の件数上限、レビューの回数、修正必須が残った場合の扱いは `docs/policies/review.md` に従う。
-- GitHub bot・CIを含む反復は `$pr-review-loop` に従う。mergeは常に明示許可を必要とする。
+- GitHub bot・CIを含む反復は `$pr-review-loop` に従う。mergeは§3のとおり明示許可を必要とする（`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、必要なレビューがすべてLGTMなら許可不要）。
 
 ## 8. Gitとローカルcommit
 
-- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。
+- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。既にそのtask専用のlinked worktreeにいる場合は、新しいworktreeを重ねて作らない。merge済みのworktreeは `AUTO_PRUNE_WORKTREES=true` なら許可なく削除してよい（未commit差分・ignoredなローカルファイルが残るものは除く。確認手順は `docs/policies/git-and-remote.md`）。branchはgraphでつながりを見るために残し、削除は明示許可がある場合だけ行う。
 - 公開repositoryでは、誤字修正などの軽微な文書更新も含め、`main`（master等のdefault branch）への取り込みを常にPR経由とし、mainへ直接commit・pushしない。軽微な文書更新もtask branchを作って編集・commitする（別worktreeは不要）。push・PR作成は§3のとおり明示許可を得てから行い、許可がない間はbranchへのcommitと報告に留める。公開か確認できないrepositoryは公開として扱い、非公開でも他者と共有するrepositoryは公開と同じ扱いとする。
 - ユーザーが管理権限を持つ公開repositoryには、branch protectionを設定して上記を機械的にも強制する。設定・変更の実行は§3のとおり明示許可を得て行い、protectionの内容と公開状態の確認手順は `docs/policies/git-and-remote.md` に従う。
 - 他者と共有しない非公開repositoryでは従来どおり、軽微な文書更新に限り、branchとstatusを確認し他作業の差分を巻き込まない場合だけ `main` のcheckoutで行ってよい。
