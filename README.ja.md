@@ -271,7 +271,11 @@ kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-setting
 読み取るため、空白や括弧を含む値も書けます。キーと既定値の一覧は
 kitの `agent-settings.env`（コメント付き）にあり、トグル対象の各規則は `AGENTS.md` の
 該当箇所にキー名を併記しています（解決の仕組みは `AGENTS.md` §1）。権限境界と
-証拠系の禁止事項（`--no-verify` 禁止等）は意図的にトグル化していません。
+証拠系の禁止事項（`--no-verify` 禁止等）は意図的にトグル化していません。唯一の
+例外が `AUTO_MERGE_PRIVATE`（既定はon）で、他者と共有しない非公開repositoryに
+限り、必要なレビューをすべて通したtask branchのdefault branchへのローカルmergeを、
+その都度の許可なしに行えます。pushとPR作成は従来どおり許可が要り、この種の例外を
+増やすときはあなたの確認が要ります（`AGENTS.md` §1）。
 
 ### 編集時の即時lint（Claude Code）
 
