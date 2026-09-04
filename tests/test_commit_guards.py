@@ -264,6 +264,93 @@ class CommitMsgBodyLangTests(unittest.TestCase):
         self.assertEqual(run_commit_msg(repo, "English only subject"), 0)
 
 
+class ThrowawayRepoSkipTests(unittest.TestCase):
+    # 一時ディレクトリ配下のrepoで、hookが動く理由が global core.hooksPath だけなら
+    # 3つのhookは何もしない（他プロジェクトのテストが mktemp に作るfixtureを止めない）。
+    # local に core.hooksPath があれば従来どおり動く。
+    def _global_config_pointing_at_kit(self) -> Path:
+        d = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, d, True)
+        cfg = d / "gitconfig"
+        cfg.write_text(f"[core]\n\thooksPath = {PRE_COMMIT_HOOK.parent}\n", encoding="utf-8")
+        return cfg
+
+    def _env(self) -> dict:
+        env = clean_env()
+        env["GIT_CONFIG_GLOBAL"] = str(self._global_config_pointing_at_kit())
+        return env
+
+    def _repo_on_main(self, env: dict) -> Path:
+        # tempfile.mkdtemp() は $TMPDIR 配下に作るので、hookから見て「一時ディレクトリ配下」になる
+        repo = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, repo, True)
+        subprocess.run(["git", "-C", str(repo), "init", "-q", "-b", "main"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@example.invalid"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, env=env)
+        subprocess.run(["git", "-C", str(repo), "config", "hooks.skipTextlint", "true"], check=True, env=env)
+        return repo
+
+    def _commit_nondoc_with_bad_subject(self, repo: Path, env: dict) -> subprocess.CompletedProcess:
+        # main 上の非文書commit（MAIN_DOC_GUARD が拒否する形）かつ日本語先の件名（commit-msg が拒否する形）。
+        # どちらのhookも動けば失敗し、両方skipされれば通る。
+        (repo / "core.clv").write_text("(ns example::core)\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "core.clv"], check=True, env=env)
+        return subprocess.run(
+            ["git", "-C", str(repo), "commit", "-q", "-m", "初期コミット / init"],
+            capture_output=True, text=True, env=env,
+        )
+
+    def test_global_only_hooks_skip_temp_repo(self):
+        env = self._env()
+        repo = self._repo_on_main(env)
+        result = self._commit_nondoc_with_bad_subject(repo, env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        # skip 時に kit の hook は何も出力しない（git 自身の hint 等は対象外）
+        self.assertNotIn("pre-commit:", result.stderr)
+        self.assertNotIn("commit-msg:", result.stderr)
+
+    def test_local_hooks_path_keeps_guards_running(self):
+        env = self._env()
+        repo = self._repo_on_main(env)
+        subprocess.run(["git", "-C", str(repo), "config", "--local", "core.hooksPath", str(PRE_COMMIT_HOOK.parent)], check=True, env=env)
+        result = self._commit_nondoc_with_bad_subject(repo, env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("main 上での文書以外の変更commit", result.stderr)
+
+    def test_commit_msg_invoked_directly_skips_only_with_global_hooks_path(self):
+        env = self._env()
+        repo = self._repo_on_main(env)
+        msg = repo / "msg.txt"
+        msg.write_text("機能を追加 / Add feature\n", encoding="utf-8")
+        skipped = subprocess.run(["sh", str(COMMIT_MSG_HOOK), str(msg)], cwd=repo, capture_output=True, text=True, env=env)
+        self.assertEqual(skipped.returncode, 0, skipped.stderr)
+        # global を隔離すると（既存テストと同じ条件）skip 条件が外れて検査が動く
+        isolated = clean_env()
+        rejected = subprocess.run(["sh", str(COMMIT_MSG_HOOK), str(msg)], cwd=repo, capture_output=True, text=True, env=isolated)
+        self.assertEqual(rejected.returncode, 1)
+        # local に core.hooksPath があれば global が残っていても検査が動く
+        subprocess.run(["git", "-C", str(repo), "config", "--local", "core.hooksPath", str(PRE_COMMIT_HOOK.parent)], check=True, env=env)
+        rejected_local = subprocess.run(["sh", str(COMMIT_MSG_HOOK), str(msg)], cwd=repo, capture_output=True, text=True, env=env)
+        self.assertEqual(rejected_local.returncode, 1)
+
+    def test_skip_still_delegates_to_the_repos_own_hooks(self):
+        # global core.hooksPath がある間、git は .git/hooks を直接呼ばない。kit の hook が
+        # 検査を飛ばすときも、repo 固有の hook への委譲は残さなければならない。
+        env = self._env()
+        repo = self._repo_on_main(env)
+        hooks_dir = repo / ".git" / "hooks"
+        hooks_dir.mkdir(parents=True, exist_ok=True)
+        for name in ("pre-commit", "commit-msg"):
+            marker = repo / f"{name}.ran"
+            hook = hooks_dir / name
+            hook.write_text(f"#!/bin/sh\n: > '{marker}'\nexit 0\n", encoding="utf-8")
+            hook.chmod(0o755)
+        result = self._commit_nondoc_with_bad_subject(repo, env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((repo / "pre-commit.ran").exists(), "repo 自身の .git/hooks/pre-commit が実行されなかった")
+        self.assertTrue((repo / "commit-msg.ran").exists(), "repo 自身の .git/hooks/commit-msg が実行されなかった")
+
+
 class PreCommitBranchGuardTests(unittest.TestCase):
     # pre-commit全体（gitleaks等）を通すと環境依存になるため、
     # hookをそのままcommit経由では走らせず、guard部分の挙動をdetach状態の

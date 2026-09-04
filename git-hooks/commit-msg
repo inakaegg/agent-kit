@@ -43,6 +43,31 @@ setting() {
   printf '%s\n' "$_default"
 }
 
+# 一時ディレクトリ配下の使い捨てリポジトリでは、このhookが動く理由が機械全体の
+# core.hooksPath だけなら kit の検査を飛ばし、repo固有の hook への委譲だけ行う
+# （条件と理由は pre-commit の同名関数と同じ）。
+is_throwaway_repo() {
+  _top="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [ -n "$_top" ] || return 1
+  _top="$(cd "$_top" 2>/dev/null && pwd -P)" || return 1
+  git config --local --get-all core.hooksPath >/dev/null 2>&1 && return 1
+  { git config --global --get-all core.hooksPath >/dev/null 2>&1 \
+    || git config --system --get-all core.hooksPath >/dev/null 2>&1; } || return 1
+  _tmp=""
+  if [ -n "${TMPDIR:-}" ] && _tmp_real="$(cd "$TMPDIR" 2>/dev/null && pwd -P)"; then
+    case "$_tmp_real" in
+      /) ;;
+      *) case "${HOME:-}" in "$_tmp_real"|"$_tmp_real"/*) ;; *) _tmp="$_tmp_real" ;; esac ;;
+    esac
+  fi
+  for _d in "$_tmp" /tmp /var/tmp /private/var/folders; do
+    [ -n "$_d" ] && [ -d "$_d" ] || continue
+    _real="$(cd "$_d" 2>/dev/null && pwd -P)" || continue
+    case "$_top" in "$_real"|"$_real"/*) return 0 ;; esac
+  done
+  return 1
+}
+
 # リポジトリ固有の .git/hooks/commit-msg があれば最後に委譲する。
 # --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
 run_local_hook() {
@@ -57,6 +82,9 @@ run_local_hook() {
   fi
   exit 0
 }
+
+# 使い捨てリポジトリなら kit の検査を飛ばし、repo固有の hook への委譲だけ行う。
+is_throwaway_repo && run_local_hook "$@"
 
 check_subject_lang() {
   if [ "$(git config --type=bool --default=false hooks.skipSubjectLang)" = "true" ]; then

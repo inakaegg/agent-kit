@@ -27,6 +27,39 @@ setting() {
   printf '%s\n' "$_default"
 }
 
+# 一時ディレクトリ配下の使い捨てリポジトリ（他プロジェクトのテストが mktemp に作る
+# fixture など）では、このhookが動く理由が機械全体の core.hooksPath だけなら、kitの検査
+# （guard・textlint・gitleaks のすべて）を行わず、repo固有の .git/hooks へ委譲するだけにする。
+# global の core.hooksPath がある間は git が .git/hooks を直接呼ばないため、その委譲を
+# 残さないと repo 自身の hook まで消える。
+# 3条件がすべて成り立つときだけ該当: toplevel が一時ディレクトリ配下 / local config に
+# core.hooksPath が無い / global か system の config に core.hooksPath がある。
+# kit自身のテストは local に hooksPath を置くか、global を隔離してhookを直接実行するので
+# この条件には当たらない。一時ディレクトリで意図的にguardを効かせたいリポジトリは
+# git config --local core.hooksPath を設定する。toplevel が取れなければ該当しない（fail-closed）。
+# $TMPDIR は継承される環境変数なので、/ や $HOME の祖先を指す誤設定は一時ディレクトリと見ない。
+is_throwaway_repo() {
+  _top="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [ -n "$_top" ] || return 1
+  _top="$(cd "$_top" 2>/dev/null && pwd -P)" || return 1
+  git config --local --get-all core.hooksPath >/dev/null 2>&1 && return 1
+  { git config --global --get-all core.hooksPath >/dev/null 2>&1 \
+    || git config --system --get-all core.hooksPath >/dev/null 2>&1; } || return 1
+  _tmp=""
+  if [ -n "${TMPDIR:-}" ] && _tmp_real="$(cd "$TMPDIR" 2>/dev/null && pwd -P)"; then
+    case "$_tmp_real" in
+      /) ;;
+      *) case "${HOME:-}" in "$_tmp_real"|"$_tmp_real"/*) ;; *) _tmp="$_tmp_real" ;; esac ;;
+    esac
+  fi
+  for _d in "$_tmp" /tmp /var/tmp /private/var/folders; do
+    [ -n "$_d" ] && [ -d "$_d" ] || continue
+    _real="$(cd "$_d" 2>/dev/null && pwd -P)" || continue
+    case "$_top" in "$_real"|"$_real"/*) return 0 ;; esac
+  done
+  return 1
+}
+
 # リポジトリ固有の .git/hooks/pre-commit があれば最後に委譲する。
 # --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
 run_local_hook() {
@@ -41,6 +74,9 @@ run_local_hook() {
   fi
   exit 0
 }
+
+# 使い捨てリポジトリなら kit の検査を飛ばし、repo固有の hook への委譲だけ行う。
+is_throwaway_repo && run_local_hook "$@"
 
 # 日本語文書lint（textlint）。全リポジトリで既定有効。リポジトリ直下に設定が
 # あればそれを優先し、なければこのkit同梱の規則で検査する。opt-outは
