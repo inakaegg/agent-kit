@@ -170,6 +170,17 @@ kitを除去するときは、ディレクトリを削除する**前に**
 `git config --global --unset core.hooksPath` を実行してください。先に削除すると、
 全リポジトリでhookが黙って動かなくなります。
 
+hookが何もしない状況が1つだけあります。システムの一時ディレクトリ（`$TMPDIR`、`/tmp`、
+`/var/tmp`、macOSではユーザーごとの `/private/var/folders` も）配下のリポジトリで、hookへ到達する理由がグローバルの `core.hooksPath` だけの
+場合です。他プロジェクトのテストはそこに使い捨てのリポジトリを作ってcommitするため、
+そのままだとmainへのコード変更を拒むguardがテストを落とします。対象は3つのhookすべてで、
+秘密情報の走査も含みます。リポジトリ自身の `.git/hooks/*` は引き続き動きます。グローバルの
+`core.hooksPath` がある間はkitのhookだけがそこへ到達する経路だからです。自分の `.git/config` に
+`core.hooksPath` を設定したリポジトリは決してskipされません。kit自身のhookテストが
+動き続けるのも、一時ディレクトリで意図的に作業するときにguardを保つのも、この設定によります。
+`$TMPDIR` が `/` や `$HOME` の祖先を指している場合は無視します。`$HOME` の中を指す
+`$TMPDIR` はそのまま使うので、本当の作業用一時ディレクトリへ向けておいてください。
+
 - `pre-commit` は、まずdetached HEADでのcommitを拒否します。branchを確認しないまま
   commitして意図しない履歴系列へ載せる事故を防ぐためです（「commit前にbranch確認」の
   規則の機械化）。rebase・`git am` の実行中は対象外です。意図的に許可するリポジトリでは

@@ -27,6 +27,31 @@ setting() {
   printf '%s\n' "$_default"
 }
 
+# 一時ディレクトリ配下の使い捨てリポジトリでは、このhookが動く理由が機械全体の
+# core.hooksPath だけなら kit の検査を飛ばし、repo固有の hook への委譲だけ行う
+# （条件と理由は pre-commit の同名関数と同じ）。
+is_throwaway_repo() {
+  _top="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [ -n "$_top" ] || return 1
+  _top="$(cd "$_top" 2>/dev/null && pwd -P)" || return 1
+  git config --local --get-all core.hooksPath >/dev/null 2>&1 && return 1
+  { git config --global --get-all core.hooksPath >/dev/null 2>&1 \
+    || git config --system --get-all core.hooksPath >/dev/null 2>&1; } || return 1
+  _tmp=""
+  if [ -n "${TMPDIR:-}" ] && _tmp_real="$(cd "$TMPDIR" 2>/dev/null && pwd -P)"; then
+    case "$_tmp_real" in
+      /) ;;
+      *) case "${HOME:-}" in "$_tmp_real"|"$_tmp_real"/*) ;; *) _tmp="$_tmp_real" ;; esac ;;
+    esac
+  fi
+  for _d in "$_tmp" /tmp /var/tmp /private/var/folders; do
+    [ -n "$_d" ] && [ -d "$_d" ] || continue
+    _real="$(cd "$_d" 2>/dev/null && pwd -P)" || continue
+    case "$_top" in "$_real"|"$_real"/*) return 0 ;; esac
+  done
+  return 1
+}
+
 # リポジトリがopt-in（git config --local hooks.runAgentCheck true）している場合だけ、
 # scripts/agent-check.sh（検証コマンドの集約。templates/VERIFICATION.md参照）をfastモードで
 # 実行し、失敗したらpushを止める。手動の検査は忘れられるため実行を機械に持たせる
@@ -62,6 +87,10 @@ run_local_hook() {
   fi
   exit 0
 }
+
+# 使い捨てリポジトリなら kit の検査を飛ばし、repo固有の hook への委譲だけ行う
+# （run_local_hook 内の agent-check は local の opt-in が無いので走らない）。
+is_throwaway_repo && run_local_hook "$@"
 
 # まとめ忘れガード（最終防衛層。主はpre-commit側）。push範囲を通して見たときだけ
 # 分かる相殺——3commit以上の合成でのnet-zero、別セッション由来のcommitとの相殺——を
