@@ -92,7 +92,7 @@ unrelated CI failureも無視せず、変更前から失敗していたか・bas
 - 対応が必要な全指摘へFIX / RECORD / REFUTE / FOLLOW-UP / BLOCKEDの判断がある
 - required CIがgreen、または明示された環境blockだけが残る
 - projectが要求するか、ユーザーが依頼したreview signalがlatest headに対して完了
-- 履歴を共有しない別セッションのreviewにも修正必須の指摘がない（軽微変更、および `INDEPENDENT_REVIEW=false` の通常対象作業ではこの条件を要求しない。重リスク作業は常に要求する）
+- 履歴を共有しない別セッションのreviewにも修正必須の指摘がない（動作に影響しない変更、および `INDEPENDENT_REVIEW=false` の通常対象作業・小さな変更ではこの条件を要求しない。重リスク作業は常に要求する）
 
 botのLGTMだけで自分のreviewを省略しない。逆に、false positiveを無理に修正してbot全員を満足させる必要もないが、反証を残す。
 
