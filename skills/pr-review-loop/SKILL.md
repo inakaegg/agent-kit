@@ -40,7 +40,7 @@ _ai/tasks/<開始日-slug>/reviews/pr-<PR番号>/
 - 古いcommitへのcommentは、現在codeにも該当するか再確認する。
 - silence、rate limit、timeout、botのmarketing section、walkthrough summaryをapprovalまたは指摘として数えない。
 - 特定bot名やworkflow名をhardcodeせず、repositoryからdiscoverする。
-- projectが要求するかユーザーが依頼したbotが利用上限・障害で止まっている場合（「usage limit」等のcommentだけでreviewが無い）は、指摘ゼロと数えない。再開時刻を確認してiteration記録へ残し、再開時刻に再依頼（`@<bot> review` 等のcomment投稿。remote writeなので許可範囲に従い、無ければ記録と報告に留める）する。再開時刻が24時間以内なら待機として扱い、本Skill §7の「review signalを返さない」停止条件に当てはめない。24時間を超えるなら状態を記録して人間判断へ戻す。任意のbot（要求も依頼もされていないもの）の停止では待たない。待つあいだは他の作業へ戻ってよい。
+- projectが要求するかユーザーが依頼したbotが利用上限・障害で止まっている場合（「usage limit」等のcommentだけでreviewが無い）は、指摘ゼロと数えない。再開時刻を確認してiteration記録へ残し、再開時刻に再依頼（`@<bot> review` 等のcomment投稿。remote writeなので許可範囲に従い、無ければ記録と報告に留める）する。再開時刻が24時間以内なら待機として扱い、本Skill §7の「review signalを返さない」停止条件に当てはめない。PR作成直後で必須botがまだ何も返していない場合も同じ上限（24時間）で待ち、poll間隔は数分単位にする。24時間を超えるなら状態を記録して人間判断へ戻す。任意のbot（要求も依頼もされていないもの）の停止では待たない。待つあいだは他の作業へ戻ってよい。
 
 ## 3. 指摘の仕分け
 
@@ -98,7 +98,7 @@ botのLGTMだけで自分のreviewを省略しない。逆に、false positive�
 
 ## 7. iteration上限
 
-最大5iteration。
+bot reviewの反復は最大2iteration。3巡目以降の指摘は課題として記録し、PRは収束扱いにする（正しさ・security・データ消失・互換性に関わる修正必須を除く）。bot指摘の仕分け既定（P0・P1相当だけ修正必須、P2以下は記録のみ）は `docs/policies/review.md` に従う。
 
 次の場合は上限前でも停止する。
 
