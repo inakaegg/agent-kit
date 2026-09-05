@@ -42,7 +42,7 @@ reviewerのCLI・実モデル・思考量・候補順は、用途に対応する
 - 実装者の会話履歴、途中仮説、自己評価、期待する結論を渡さない。
 - Reviewer processでは、実装者向けの作業手順注入（SessionStart hook、skill案内、plugin指示）を無効化する。プロジェクト規約 `AGENTS.md` は §2 の通り渡すが、実装者の作業手順は渡さない。
   - claude: `--setting-sources ""` `--disable-slash-commands` `--no-session-persistence`
-  - codex: `--ignore-user-config` `--ephemeral` `-s read-only`
+  - codex: `--ignore-user-config` `--ephemeral` `-s read-only` `--disable hooks`（`--ignore-user-config` だけでは信頼登録済みの `$CODEX_HOME/hooks.json` のhookが走る）
 - Reviewerはcodeを変更しないread-only roleとする。
 - サブエージェントを無制限に使わない。別CLI processを1つ、最大1reviewerとする。
 

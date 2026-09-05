@@ -120,6 +120,21 @@ class ModelResolverTest(unittest.TestCase):
         self.assertEqual(result["candidate"], FIRST)
         self.assertTrue(result["provisional"])
 
+    def test_codex_argv_sandbox_and_hooks_follow_the_role(self):
+        self.executable("codex")
+        code, result = self.run_cli()
+        self.assertEqual(code, 0)
+        self.assertIn("read-only", result["argv"])
+        self.assertEqual(result["argv"][result["argv"].index("--disable") + 1], "hooks")
+        self.defaults.write_text(f"WRITING_MODEL_DEEP={FIRST} {SECOND}\nREVIEW_REQUIRE_OTHER_LINEAGE=false\n")
+        env = os.environ.copy(); env["PATH"] = str(self.bin); env.pop("CLAUDECODE", None); env.pop("CODEX_THREAD_ID", None)
+        out = subprocess.run([sys.executable, str(SCRIPT), "--key", "WRITING_MODEL_DEEP", "--repo", str(self.repo),
+                              "--kit-settings", str(self.defaults)], env=env, text=True, capture_output=True)
+        argv = json.loads(out.stdout)["argv"]
+        self.assertIn("workspace-write", argv)
+        self.assertNotIn("read-only", argv)
+        self.assertNotIn("--disable", argv)
+
     def test_callers_cli_goes_first_unless_other_lineage_is_required(self):
         self.executable("codex")
         self.executable("claude")

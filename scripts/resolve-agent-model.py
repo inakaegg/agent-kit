@@ -143,7 +143,14 @@ def select(values: dict, sources: dict, key: str, unavailable: dict, binaries: d
             argv = [executable, "exec", "--ignore-user-config", "--ephemeral", "-m", model,
                     "-c", "model_reasoning_effort=" + json.dumps(effort)]
             if key.startswith("REVIEW_"):
-                argv += ["-s", "read-only"]
+                # A reviewer must not edit and must not receive the implementer's workflow:
+                # --ignore-user-config leaves already-trusted $CODEX_HOME hooks active, so
+                # the hooks feature is switched off explicitly.
+                argv += ["-s", "read-only", "--disable", "hooks"]
+            else:
+                # A writer selected through WRITING_MODEL_DEEP has to edit the document; with the
+                # user config ignored the default sandbox would be read-only.
+                argv += ["-s", "workspace-write"]
         else:
             argv = [executable, "-p", "--model", model, "--effort", effort,
                     "--setting-sources", "", "--disable-slash-commands", "--no-session-persistence"]
