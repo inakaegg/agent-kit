@@ -28,17 +28,17 @@ description: >-
 
 reviewerのCLI・実モデル・思考量・候補順は、用途に対応する `REVIEW_MODEL_HEAVY`、`REVIEW_MODEL_DEFAULT`、`REVIEW_MODEL_READABILITY` の設定だけから選ぶ。本文へ既定モデルや思考量を固定しない。
 
-1. 同梱の `python3 scripts/resolve-agent-model.py --key <用途キー> --repo <作業repoのroot>` を実行する。full kitではkitの設定、単体配布では `references/model-defaults.env` を既定とし、repo設定を優先する。既定設定のコピーはkit側で生成する。直接編集しない。
+1. 同梱の `python3 scripts/resolve-agent-model.py --key <用途キー> --repo <作業repoのroot>` を実行する。full kitではkitの設定、単体配布では `references/model-defaults.env` を既定とし、repo設定を優先する。既定設定のコピーはkit側で生成する。直接編集しない。resolverは自分が動いているCLI（`CLAUDECODE` / `CODEX_THREAD_ID` で自動判定。`--primary-cli` で明示可）の候補を先に試す。重リスク作業で `REVIEW_REQUIRE_OTHER_LINEAGE=true` のときだけ別系統が先になる。
 2. 出力された `candidate`、`source`、`skipped` を記録し、`argv` の配列からreviewerを起動する。CLIの既定モデルへ任せず、コマンド文字列へ再連結してevalしない。必要なread-onlyのtools・資料・出力先は後続の規則に従って加える。
 3. CLI未導入はresolverが自動除外する。起動後に認証不能・モデル利用不可・利用上限を明確に観測した場合だけ、証跡とともに `--unavailable '<candidate>=<reason>'` を追加して再解決する。reasonは `authentication`、`model-unavailable`、`rate-limit`。各候補は1回だけ試し、利用不能と分かっている候補を同じtask中に再試行しない。レビュー指摘、検査失敗、一般的な非ゼロ終了、無出力や時間経過だけでは切り替えない。
 4. 設定された候補への切り替えは自動で行い、CLI・モデル・思考量・理由を報告する。候補外のモデルや追加課金の経路へ切り替えない。全候補が使えない場合は停止し、使える担当が必要なことを報告する。
-5. `REVIEW_REQUIRE_OTHER_LINEAGE=true` の重リスクレビューでは `--implementer-cli` を渡す。別系統を優先し、使えない場合だけ同系統を `provisional=true` として選ぶ。暫定通過と別系統でのやり直し残件を契約に記録する。falseなら指定順を優先し、片方しかない環境でも履歴を共有しない別セッションのレビューで完了できる。独立した別セッションという条件は常に維持する。
+5. `REVIEW_REQUIRE_OTHER_LINEAGE=true` の重リスクレビューでは `--implementer-cli` を渡す。別系統を優先し、使えない場合だけ同系統を `provisional=true` として選ぶ。暫定通過と別系統でのやり直し残件を契約に記録する。falseなら呼び出し元のCLIを先にした候補順（同一CLI内は指定順）で進め、片方しかない環境でも履歴を共有しない別セッションのレビューで完了できる。独立した別セッションという条件は常に維持する。
 
 
 ## 1. 独立性
 
 - 履歴を共有しない別セッションを使う。
-- 可能なら実装とは別のtool/modelを使う。
+- 別のtool/modelは重リスク作業（`REVIEW_REQUIRE_OTHER_LINEAGE=true`）でだけ必須とし、それ以外は呼び出し元のCLIの候補を既定とする（`docs/policies/review.md`）。
 - 実装者の会話履歴、途中仮説、自己評価、期待する結論を渡さない。
 - Reviewer processでは、実装者向けの作業手順注入（SessionStart hook、skill案内、plugin指示）を無効化する。プロジェクト規約 `AGENTS.md` は §2 の通り渡すが、実装者の作業手順は渡さない。
   - claude: `--setting-sources ""` `--disable-slash-commands` `--no-session-persistence`

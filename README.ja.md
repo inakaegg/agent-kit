@@ -350,7 +350,11 @@ Codex CLI 0.153.4で、Bashの実行前ガードとapply_patch後のlintが呼�
 
 ### モデルとフォールバックの設定
 
-各担当のCLI・モデル名・思考量・候補順は、[agent-settings.env](agent-settings.env)に `CLI:MODEL(EFFORT)` の形で設定します。作業repoの設定が既定値より優先され、CLIの既定モデルには任せません。CLI未導入や、認証不能・モデル利用不可・利用上限が確認された場合は、設定した次候補へ切り替えます。通常の検査失敗やレビュー指摘では切り替えません。担当の独立性と詳しい条件は[レビュー規則](docs/policies/review.md)を参照してください。
+各担当のCLI・モデル名・思考量・候補順は、[agent-settings.env](agent-settings.env)に `CLI:MODEL(EFFORT)` の形で設定します。作業repoの設定が既定値より優先され、CLIの既定モデルには任せません。
+
+書いた並びは同じCLI内での優先順で、どちらのCLIを先にするかは呼び出し元で決まります。resolverは各CLIが子プロセスへ渡す環境変数（Claude Codeは `CLAUDECODE`、Codexは `CODEX_THREAD_ID`。`--primary-cli` で明示できます）から自分が動いているCLIを判定し、そのCLIの候補を先に試します。そのため、Claude Codeで始めた作業はClaudeの、Codexで始めた作業はCodexの利用枠に寄ります。どちらの環境変数も無いとき、または両方あるとき（一方のCLIの中からもう一方を起動した場合）は、設定の並びをそのまま使います。例外は `REVIEW_REQUIRE_OTHER_LINEAGE=true` の重リスクレビューで、`--implementer-cli` で渡した実装担当と別の系統（CodexかClaudeかのもう一方）を、呼び出し元によらず先にします。
+
+CLI未導入や、認証不能・モデル利用不可・利用上限が確認された場合は、その並べ替え後の次候補へ切り替えます。通常の検査失敗やレビュー指摘では切り替えません。担当の独立性と詳しい条件は[レビュー規則](docs/policies/review.md)を参照してください。
 
 ```sh
 python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/project

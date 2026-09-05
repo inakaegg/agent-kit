@@ -12,11 +12,12 @@
 
 ## レビュー担当の選び方と待ち方
 
-- レビュー担当は、その成果物を作成・実装した担当とは別の、履歴を共有しない別セッションを必須とし、可能なら別のtool/modelを使う。思考量の既定は `$independent-review` に従い、実装と同じ最高設定を既定にしない。
+- レビュー担当は、その成果物を作成・実装した担当とは別の、履歴を共有しない別セッションを必須とする。別のtool/modelは重リスク作業でだけ必須とし、それ以外は呼び出し元のCLIの候補を既定とする（後述の並べ替え）。思考量の既定は `$independent-review` に従い、実装と同じ最高設定を既定にしない。
 - **どのモデルを担当にするかは agent-settings のキーで決める。** 重リスク作業（外部操作、課金、security、データ消失、その他 `AGENTS.md` §7の重リスク区分）は `REVIEW_MODEL_HEAVY` を使う。通常対象作業は `REVIEW_MODEL_DEFAULT`、人間向け文書の読みやすさレビューは `REVIEW_MODEL_READABILITY` が示す担当を使う。解決順（kit既定 → 作業repo → local）は `AGENTS.md` §1 のとおり。
 - 値は `CLI:MODEL(EFFORT)` を空白区切りで優先順に並べる。CLIは `codex` または `claude`、MODELは実モデル名、EFFORTはそのCLIの思考量で、いずれも省略しない。スキル本文や起動処理へ実モデルと既定思考量を固定しない。`scripts/resolve-agent-model.py` が用途キーから実行argvを解決する。旧形式の系統だけの指定や `any` はモデルが曖昧なため、具体的な候補へ移行する。
-- CLI未導入は自動で次候補へ進む。起動後の認証不能・明確なモデル利用不可・利用上限は、証跡を残してresolverの `--unavailable` へ渡し、設定順で自動フォールバックする。各候補1回までとし、レビュー指摘・検査失敗・一般的な非ゼロ終了・無出力だけでは切り替えない。候補が尽きたら停止し、候補外や追加課金の経路へ広げない。選んだCLI、実モデル、思考量、設定元、切り替え理由を報告する。
-- `REVIEW_REQUIRE_OTHER_LINEAGE=false` では、指定候補の順序を優先し、CodexまたはClaudeの片方だけでも別セッションによるレビューで完了できる。trueの場合は重リスク用途のresolverへ `--implementer-cli` を渡し、別系統を優先する。別系統がすべて利用不能なら同系統を `provisional=true` として選び、後述の暫定通過を適用する。独立した別セッションという条件は、どちらの設定でも維持する。
+- 候補の並びは同じCLI内での優先順とし、どのCLIを先にするかは呼び出し元で決める。resolverは自分が動いているCLI（Claude Codeは `CLAUDECODE`、Codexは `CODEX_THREAD_ID` の環境変数で自動判定。`--primary-cli` で明示できる）と同じCLIの候補を先に試す。Claudeで始めた作業はClaudeの、Codexで始めた作業はCodexの利用枠に寄る。例外は `REVIEW_REQUIRE_OTHER_LINEAGE=true` の重リスク作業で、呼び出し元によらず実装側と別系統を先にする。どちらの環境変数も無いとき（hook、cron、素のshell）と、両方あるとき（一方のCLIからもう一方を起動した入れ子で、内側を判別できない）は並べ替えず設定順のまま使う。入れ子で寄せたいCLIがあれば `--primary-cli` を明示する。この規則の導入前は候補の並びが呼び出し元によらない優先順だった。呼び出し元によらず固定したい場合は `--primary-cli` を明示するか、候補を1つのCLIに絞る。
+- CLI未導入は自動で次候補へ進む。起動後の認証不能・明確なモデル利用不可・利用上限は、証跡を残してresolverの `--unavailable` へ渡し、並べ替え後の順で自動フォールバックする。各候補1回までとし、レビュー指摘・検査失敗・一般的な非ゼロ終了・無出力だけでは切り替えない。候補が尽きたら停止し、候補外や追加課金の経路へ広げない。選んだCLI、実モデル、思考量、設定元、並べ替えの根拠（出力の `ordering`: `primary-cli` / `other-lineage` / `configured` と `primary_cli`）、切り替え理由を報告する。
+- `REVIEW_REQUIRE_OTHER_LINEAGE=false` では、呼び出し元のCLIを先にした候補順（同一CLI内は指定順）で進め、CodexまたはClaudeの片方だけでも別セッションによるレビューで完了できる。trueの場合は重リスク用途のresolverへ `--implementer-cli` を渡し、別系統を優先する。別系統がすべて利用不能なら同系統を `provisional=true` として選び、後述の暫定通過を適用する。独立した別セッションという条件は、どちらの設定でも維持する。
 - full kitではkitの設定を参照し、単体配布のreview関連Skillは同梱のresolverと生成済み設定を使う。配布用コピーは `python3 scripts/sync-model-resolver.py` で正本から生成し、検証時に内容一致を検査する。repoの `agent-settings.env` は既定より優先する。担当関連5キーの値を変える `agent-settings.local.env` は、強弱を推測せず一律に拒否する。
 - **担当モデルのキー（`REVIEW_MODEL_*`・`REVIEW_REQUIRE_OTHER_LINEAGE`・`WRITING_MODEL_DEEP` の5キー）の値を変えてよいのは、ユーザーの明示指示があるときだけとする。** エージェントが自分の判断で緩めない。緩めた場合は、変えたキー・値・理由をタスクの契約へ書く。痕跡が残るよう、緩和はgit管理下のenv（kitか作業repoの `agent-settings.env`）で行い、git管理外の `agent-settings.local.env` を緩和に使わない。
 - `REVIEW_REQUIRE_OTHER_LINEAGE=true` のあいだ、重リスク作業のレビュー担当は、別系統のモデルが使える限り実装担当と**別系統を必須**とする。別系統が利用上限等で使えないときは、通常対象作業は同系統で進めてよい。重リスク作業は同系統で暫定通過として先へ進み、別系統が使えるようになった時点でその段階をやり直す。暫定通過の事実とやり直しの残件をタスクの契約へ書き残す。

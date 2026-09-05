@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -21,6 +22,9 @@ EFFORTS = {
 }
 CANDIDATE = re.compile(r"(codex|claude):([A-Za-z0-9][A-Za-z0-9._/-]*)\(([a-z]+)\)")
 UNAVAILABLE_REASONS = {"authentication", "model-unavailable", "rate-limit"}
+# Which CLI the calling session runs in. Claude Code exports CLAUDECODE to its children,
+# Codex exports CODEX_THREAD_ID; a script run outside either sees neither.
+PRIMARY_ENV = (("CODEX_THREAD_ID", "codex"), ("CLAUDECODE", "claude"))
 
 
 class SettingsError(ValueError):
@@ -92,8 +96,18 @@ def unavailable_candidates(entries: list[str]) -> dict[str, str]:
     return unavailable
 
 
+def detect_primary_cli(environ=os.environ) -> str | None:
+    """The CLI this process runs in, or None when it cannot be told.
+
+    Both variables set means a nested launch (one CLI started from the other); the inner one
+    cannot be told from the outer, so no CLI is preferred and the configured order stands
+    unless --primary-cli says otherwise."""
+    found = [cli for variable, cli in PRIMARY_ENV if environ.get(variable)]
+    return found[0] if len(found) == 1 else None
+
+
 def select(values: dict, sources: dict, key: str, unavailable: dict, binaries: dict,
-           implementer_cli: str | None = None) -> dict:
+           implementer_cli: str | None = None, primary_cli: str | None = None) -> dict:
     candidates = values.get(key, "").split()
     if not candidates:
         raise SettingsError(f"{key} is empty or missing")
@@ -107,9 +121,16 @@ def select(values: dict, sources: dict, key: str, unavailable: dict, binaries: d
     if any(candidate not in candidates for candidate in unavailable):
         raise SettingsError("--unavailable names a candidate outside this role's configured list")
     skipped = []
-    ordered = parsed
+    ordered, ordering = parsed, "configured"
     if require_other:
+        ordering = "other-lineage"
+        # Heavy-risk review: the other lineage comes first whatever CLI the caller runs in.
         ordered = [p for p in parsed if p[1][0] != implementer_cli] + [p for p in parsed if p[1][0] == implementer_cli]
+    elif primary_cli:
+        ordering = "primary-cli"
+        # Everything else follows the caller's CLI, so the session's own plan is used first;
+        # the configured order still decides within each CLI.
+        ordered = [p for p in parsed if p[1][0] == primary_cli] + [p for p in parsed if p[1][0] != primary_cli]
     for candidate, (cli, model, effort) in ordered:
         if candidate in unavailable:
             skipped.append({"candidate": candidate, "reason": unavailable[candidate]})
@@ -128,9 +149,10 @@ def select(values: dict, sources: dict, key: str, unavailable: dict, binaries: d
                     "--setting-sources", "", "--disable-slash-commands", "--no-session-persistence"]
         return {"status": "selected", "key": key, "source": sources[key], "candidate": candidate,
                 "cli": cli, "model": model, "effort": effort, "argv": argv, "skipped": skipped,
-                "require_other_lineage": require_other,
-                "provisional": require_other and cli == implementer_cli}
-    return {"status": "unavailable", "key": key, "source": sources[key], "skipped": skipped}
+                "require_other_lineage": require_other, "primary_cli": primary_cli,
+                "ordering": ordering, "provisional": require_other and cli == implementer_cli}
+    return {"status": "unavailable", "key": key, "source": sources[key], "skipped": skipped,
+            "require_other_lineage": require_other, "primary_cli": primary_cli, "ordering": ordering}
 
 
 def main() -> int:
@@ -141,12 +163,17 @@ def main() -> int:
     parser.add_argument("--codex-bin")
     parser.add_argument("--claude-bin")
     parser.add_argument("--implementer-cli", choices=("codex", "claude"))
+    parser.add_argument("--primary-cli", choices=("codex", "claude"),
+                        help="CLI whose candidates are tried first (default: the CLI this session runs in, "
+                             "detected from CODEX_THREAD_ID / CLAUDECODE; heavy reviews with "
+                             "REVIEW_REQUIRE_OTHER_LINEAGE=true still put the other lineage first)")
     parser.add_argument("--unavailable", action="append", default=[], metavar="CANDIDATE=REASON")
     args = parser.parse_args()
     try:
         values, sources = settings_for(args.kit_settings or default_settings(), args.repo.resolve())
         result = select(values, sources, args.key, unavailable_candidates(args.unavailable),
-                        {"codex": args.codex_bin, "claude": args.claude_bin}, args.implementer_cli)
+                        {"codex": args.codex_bin, "claude": args.claude_bin}, args.implementer_cli,
+                        args.primary_cli or detect_primary_cli())
     except (SettingsError, OSError) as error:
         print(json.dumps({"status": "invalid-settings", "error": str(error)}, ensure_ascii=False))
         return 2

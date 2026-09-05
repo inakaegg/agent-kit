@@ -211,7 +211,11 @@ This registration is a manual step each user performs, like the `npm install` ab
 
 ### Explicit model selection
 
-Configure each role's CLI, model, effort and fallback order in [agent-settings.env](agent-settings.env), using `CLI:MODEL(EFFORT)` entries. Repository settings override the defaults. No model or effort is inferred from the CLI's defaults. Missing CLIs and confirmed authentication, model-availability or rate-limit failures can advance to the next configured candidate; ordinary test failures and review findings cannot. See [review policy](docs/policies/review.md) for the selection and independence rules.
+Configure each role's CLI, model, effort and fallback order in [agent-settings.env](agent-settings.env), using `CLI:MODEL(EFFORT)` entries. Repository settings override the defaults. No model or effort is inferred from the CLI's defaults.
+
+The order you write is the priority within each CLI; which CLI goes first is decided by the caller. The resolver detects the CLI it is running in from the environment variables the CLIs export (`CLAUDECODE` for Claude Code, `CODEX_THREAD_ID` for Codex; `--primary-cli` sets it explicitly instead) and tries that CLI's candidates first, so work started in Claude Code leans on the Claude subscription and work started in Codex on the Codex subscription. When neither variable is set, or both are (one CLI launched from inside the other), the configured order is used as written. One exception: a heavy-risk review with `REVIEW_REQUIRE_OTHER_LINEAGE=true` puts the lineage other than the implementer's (Codex versus Claude, given with `--implementer-cli`) first, regardless of which CLI the caller runs in.
+
+Missing CLIs and confirmed authentication, model-availability or rate-limit failures can advance to the next candidate in that resolved order; ordinary test failures and review findings cannot. See [review policy](docs/policies/review.md) for the selection and independence rules.
 
 ```sh
 python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/project

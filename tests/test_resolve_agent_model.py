@@ -36,9 +36,13 @@ class ModelResolverTest(unittest.TestCase):
         path.chmod(0o755)
         return path
 
-    def run_cli(self, *args, script=SCRIPT):
+    def run_cli(self, *args, script=SCRIPT, env_extra=None):
         env = os.environ.copy()
         env["PATH"] = str(self.bin)
+        # The test process itself runs under one CLI or another; hide that so each case chooses.
+        env.pop("CLAUDECODE", None)
+        env.pop("CODEX_THREAD_ID", None)
+        env.update(env_extra or {})
         result = subprocess.run([sys.executable, str(script), "--key", KEY, "--repo", str(self.repo),
                                  "--kit-settings", str(self.defaults), *args],
                                 env=env, text=True, capture_output=True)
@@ -116,6 +120,40 @@ class ModelResolverTest(unittest.TestCase):
         self.assertEqual(result["candidate"], FIRST)
         self.assertTrue(result["provisional"])
 
+    def test_callers_cli_goes_first_unless_other_lineage_is_required(self):
+        self.executable("codex")
+        self.executable("claude")
+        # Explicit flag, then auto-detection from the session's environment.
+        code, result = self.run_cli("--primary-cli", "claude")
+        self.assertEqual((code, result["candidate"], result["primary_cli"]), (0, SECOND, "claude"))
+        self.assertEqual(result["ordering"], "primary-cli")
+        code, result = self.run_cli(env_extra={"CLAUDECODE": "1"})
+        self.assertEqual((code, result["candidate"]), (0, SECOND))
+        code, result = self.run_cli(env_extra={"CODEX_THREAD_ID": "t"})
+        self.assertEqual((code, result["candidate"]), (0, FIRST))
+        code, result = self.run_cli()
+        self.assertEqual((code, result["candidate"], result["primary_cli"]), (0, FIRST, None))
+        # Nested launch (both variables set): ambiguous, so the configured order stands.
+        code, result = self.run_cli(env_extra={"CLAUDECODE": "1", "CODEX_THREAD_ID": "t"})
+        self.assertEqual((code, result["candidate"], result["primary_cli"]), (0, FIRST, None))
+        self.assertEqual(result["ordering"], "configured")
+        code, result = self.run_cli("--primary-cli", "claude", env_extra={"CLAUDECODE": "1", "CODEX_THREAD_ID": "t"})
+        self.assertEqual((code, result["candidate"]), (0, SECOND))
+        # Reordering only moves whole CLIs; the written order survives within each CLI.
+        third, fourth = "claude:model-three(low)", "codex:model-four(low)"
+        self.defaults.write_text(f"{KEY}={FIRST} {SECOND} {third} {fourth}\nREVIEW_REQUIRE_OTHER_LINEAGE=false\n")
+        code, result = self.run_cli("--primary-cli", "claude", "--unavailable", SECOND + "=rate-limit")
+        self.assertEqual((code, result["candidate"]), (0, third))
+        code, result = self.run_cli("--primary-cli", "claude", "--unavailable", SECOND + "=rate-limit",
+                                    "--unavailable", third + "=rate-limit")
+        self.assertEqual((code, result["candidate"]), (0, FIRST))
+        self.defaults.write_text(f"{KEY}={FIRST} {SECOND}\nREVIEW_REQUIRE_OTHER_LINEAGE=false\n")
+        # A heavy-risk review with the other lineage required ignores the caller's CLI.
+        (self.repo / "agent-settings.env").write_text("REVIEW_REQUIRE_OTHER_LINEAGE=true\n")
+        code, result = self.run_cli("--implementer-cli", "codex", "--primary-cli", "codex")
+        self.assertEqual((code, result["candidate"], result["provisional"]), (0, SECOND, False))
+        self.assertEqual(result["ordering"], "other-lineage")
+
     def test_ambiguous_empty_or_shell_text_is_rejected_not_executed(self):
         self.executable("codex")
         marker = self.root / "must-not-exist"
@@ -141,6 +179,8 @@ class ModelResolverTest(unittest.TestCase):
                 script = copy / "scripts/resolve-agent-model.py"
                 env = os.environ.copy()
                 env["PATH"] = str(self.bin)
+                env.pop("CLAUDECODE", None)
+                env.pop("CODEX_THREAD_ID", None)
                 result = subprocess.run([sys.executable, str(script), "--key", "REVIEW_MODEL_READABILITY",
                                          "--repo", str(self.repo)], env=env, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
