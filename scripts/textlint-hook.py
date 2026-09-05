@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
-"""Claude Code PostToolUse hook: .mdの編集直後にtextlintを実行する。
+"""Claude Code / Codex の PostToolUse hook: .mdの編集直後にtextlintを実行する。
 
 指摘があればexit 2でstderrへ出し、エージェントに即時修正させる。
 編集のたびに走るのは決定論的で安価なlintだけ、という設計の範囲内で使う
 （LLMによる意味レビューは公開・提出前のgateに置き、ここでは行わない）。
+
+入力はstdinのJSON。編集されたファイルの取り方はCLIで異なる。
+  - Claude Code（Edit / Write）: tool_input.file_path
+  - Codex（apply_patch）: tool_input.command に patch 本文が入るので、
+    "*** Add File:" / "*** Update File:"（"*** Move to:" があれば移動先）の行から取る。
+    相対pathは payload の cwd 基準で解決する。
 
 登録方法はREADMEのGit hooks節の次の項を参照。
 """
@@ -37,6 +43,10 @@ LATIN_RE = re.compile(r"[A-Za-z]")
 # 2%: 英語READMEの相互リンク1行（1%未満）は対象外、英語骨格に日本語の注記が数文ある
 # テンプレート（4%前後）は対象に入る。
 JAPANESE_RATIO_MIN = 0.02
+# Codex の apply_patch 形式。Add/Update が対象ファイル、直後の Move to が移動先。
+# Delete File は編集後に存在しないので対象外。
+PATCH_TARGET_RE = re.compile(r"^\*\*\* (Add File|Update File): (.+)$")
+PATCH_MOVE_RE = re.compile(r"^\*\*\* Move to: (.+)$")
 
 
 def is_japanese_document(path: Path) -> bool:
@@ -49,6 +59,46 @@ def is_japanese_document(path: Path) -> bool:
         return False
     latin = len(LATIN_RE.findall(text))
     return ja / (ja + latin) >= JAPANESE_RATIO_MIN
+
+
+def patch_targets(patch: str) -> list[str]:
+    """apply_patch の本文から、編集後に存在するファイルのpathを出現順に返す。"""
+    targets: list[str] = []
+    for line in patch.splitlines():
+        m = PATCH_TARGET_RE.match(line)
+        if m:
+            targets.append(m.group(2).strip())
+            continue
+        m = PATCH_MOVE_RE.match(line)
+        if m and targets:
+            targets[-1] = m.group(1).strip()
+    return targets
+
+
+def edited_markdown_paths(payload: dict) -> list[Path]:
+    """hook入力から、lint対象の .md の絶対pathを返す（CLIの違いをここで吸収する）。"""
+    tool_input = payload.get("tool_input") or {}
+    if not isinstance(tool_input, dict):
+        return []
+    file_path = tool_input.get("file_path")
+    if isinstance(file_path, str) and file_path:
+        candidates = [file_path]
+    elif payload.get("tool_name") == "apply_patch":
+        command = tool_input.get("command")
+        candidates = patch_targets(command) if isinstance(command, str) else []
+    else:
+        return []
+    base = Path(payload.get("cwd") or os.getcwd())
+    paths: list[Path] = []
+    for candidate in candidates:
+        if not candidate.endswith(".md"):
+            continue
+        path = Path(candidate)
+        if not path.is_absolute():
+            path = base / path
+        if path not in paths:
+            paths.append(path)
+    return paths
 
 
 def repo_root_of(path: Path) -> Path | None:
@@ -83,15 +133,8 @@ def resolve_config(path: Path) -> Path | None:
     return fallback if fallback.is_file() else None
 
 
-def main() -> int:
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return 0
-    file_path = (payload.get("tool_input") or {}).get("file_path") or ""
-    if not file_path.endswith(".md"):
-        return 0
-    path = Path(file_path)
+def lint_one(path: Path) -> int:
+    """1ファイルをlintし、指摘があれば stderr へ出して 2 を返す。対象外・未導入は 0。"""
     if not path.is_file():
         return 0
     if SKIP_DIR_NAMES.intersection(path.parts):
@@ -123,6 +166,19 @@ def main() -> int:
         file=sys.stderr,
     )
     return 2
+
+
+def main() -> int:
+    try:
+        payload = json.load(sys.stdin)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return 0
+    if not isinstance(payload, dict):
+        return 0
+    status = 0
+    for path in edited_markdown_paths(payload):
+        status = max(status, lint_one(path))
+    return status
 
 
 if __name__ == "__main__":

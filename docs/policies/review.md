@@ -14,7 +14,10 @@
 
 - レビュー担当は、その成果物を作成・実装した担当とは別の、履歴を共有しない別セッションを必須とし、可能なら別のtool/modelを使う。思考量の既定は `$independent-review` に従い、実装と同じ最高設定を既定にしない。
 - **どのモデルを担当にするかは agent-settings のキーで決める。** 重リスク作業（外部操作、課金、security、データ消失、その他 `AGENTS.md` §7の重リスク区分）は `REVIEW_MODEL_HEAVY` を使う。通常対象作業は `REVIEW_MODEL_DEFAULT`、人間向け文書の読みやすさレビューは `REVIEW_MODEL_READABILITY` が示す担当を使う。解決順（kit既定 → 作業repo → local）は `AGENTS.md` §1 のとおり。
-- 値は「系統」または「系統(思考量)」を空白区切りで**先頭からの優先順**に並べたものとする。系統名は固定語彙ではなくtool/model系統の自由なラベル（例: `codex` / `fable` / `opus`）で、新モデルは設定値に名前を書けば使える。`any` は系統を問わない（履歴を共有しない別セッションであればよい）。値が矛盾している場合（値が空、`REVIEW_REQUIRE_OTHER_LINEAGE=true` なのに実装担当と同系統しか並んでいない等）は、推測せず `AGENTS.md` §10 に従って停止しユーザーへ確認する。
+- 値は `CLI:MODEL(EFFORT)` を空白区切りで優先順に並べる。CLIは `codex` または `claude`、MODELは実モデル名、EFFORTはそのCLIの思考量で、いずれも省略しない。スキル本文や起動処理へ実モデルと既定思考量を固定しない。`scripts/resolve-agent-model.py` が用途キーから実行argvを解決する。旧形式の系統だけの指定や `any` はモデルが曖昧なため、具体的な候補へ移行する。
+- CLI未導入は自動で次候補へ進む。起動後の認証不能・明確なモデル利用不可・利用上限は、証跡を残してresolverの `--unavailable` へ渡し、設定順で自動フォールバックする。各候補1回までとし、レビュー指摘・検査失敗・一般的な非ゼロ終了・無出力だけでは切り替えない。候補が尽きたら停止し、候補外や追加課金の経路へ広げない。選んだCLI、実モデル、思考量、設定元、切り替え理由を報告する。
+- `REVIEW_REQUIRE_OTHER_LINEAGE=false` では、指定候補の順序を優先し、CodexまたはClaudeの片方だけでも別セッションによるレビューで完了できる。trueの場合は重リスク用途のresolverへ `--implementer-cli` を渡し、別系統を優先する。別系統がすべて利用不能なら同系統を `provisional=true` として選び、後述の暫定通過を適用する。独立した別セッションという条件は、どちらの設定でも維持する。
+- full kitではkitの設定を参照し、単体配布のreview関連Skillは同梱のresolverと生成済み設定を使う。配布用コピーは `python3 scripts/sync-model-resolver.py` で正本から生成し、検証時に内容一致を検査する。repoの `agent-settings.env` は既定より優先する。担当関連5キーの値を変える `agent-settings.local.env` は、強弱を推測せず一律に拒否する。
 - **担当モデルのキー（`REVIEW_MODEL_*`・`REVIEW_REQUIRE_OTHER_LINEAGE`・`WRITING_MODEL_DEEP` の5キー）の値を変えてよいのは、ユーザーの明示指示があるときだけとする。** エージェントが自分の判断で緩めない。緩めた場合は、変えたキー・値・理由をタスクの契約へ書く。痕跡が残るよう、緩和はgit管理下のenv（kitか作業repoの `agent-settings.env`）で行い、git管理外の `agent-settings.local.env` を緩和に使わない。
 - `REVIEW_REQUIRE_OTHER_LINEAGE=true` のあいだ、重リスク作業のレビュー担当は、別系統のモデルが使える限り実装担当と**別系統を必須**とする。別系統が利用上限等で使えないときは、通常対象作業は同系統で進めてよい。重リスク作業は同系統で暫定通過として先へ進み、別系統が使えるようになった時点でその段階をやり直す。暫定通過の事実とやり直しの残件をタスクの契約へ書き残す。
 - 暫定通過中の重リスク作業は「必要なレビューをすべて通した」状態に当たらない。`AUTO_MERGE_PRIVATE=true` による許可なしのローカルmergeは、やり直しが済むまで行わない。

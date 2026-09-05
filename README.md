@@ -57,8 +57,8 @@ Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in sk
 ├── scripts/
 │   ├── agent-check.example.sh
 │   ├── agent-check.sh       # the kit's own checks (validate-kit + tests), run by pre-push and CI
-│   ├── git-guard-hook.py    # Claude Code: blocks --no-verify and git add . in agent commands
-│   ├── textlint-hook.py     # Claude Code: instant lint right after a .md edit
+│   ├── git-guard-hook.py    # Claude Code / Codex hook: blocks --no-verify and git add . in agent commands
+│   ├── textlint-hook.py     # Claude Code / Codex hook: instant lint right after a .md edit
 │   └── validate-kit.py
 └── tests/
     ├── test_commit_guards.py
@@ -159,11 +159,13 @@ The hooks stand down in one situation: a repository under the system temp direct
 
 ### Settings toggles (agent-settings)
 
-Some rules — the hook checks above and a few working rules in `AGENTS.md` and `CLAUDE.md` (auto commit, worktree requirement, reviews and which models review or write, CLI-first) — can be switched per repository through `agent-settings.env`. Model duties are plain values (`REVIEW_MODEL_*`, `WRITING_MODEL_DEEP`), so usage limits or new models are handled by changing a setting, not by editing the rule documents. Resolution is three layers, later wins: the kit's `agent-settings.env` (defaults) → `agent-settings.env` at the work repository's root → `agent-settings.local.env` there (untracked; add it to the repository's `.gitignore`; use it for personal or temporary switches — except loosening the five model-duty keys (`REVIEW_MODEL_*`, `REVIEW_REQUIRE_OTHER_LINEAGE`, `WRITING_MODEL_DEEP`), which must stay in a tracked env file for traceability). The format is plain `KEY=value` lines, read line by line (never sourced as shell), so values may contain spaces and parentheses. The keys and their defaults live in the kit's `agent-settings.env` (commented); each toggleable rule in `AGENTS.md` (or `CLAUDE.md`, for Claude Code specific ones) names its key inline, and the resolution mechanism is defined in `AGENTS.md` §1. Permission boundaries and the evidence rules (e.g. the `--no-verify` ban) are deliberately not toggleable, with one exception: `AUTO_MERGE_PRIVATE`, on by default, lets an agent merge a fully reviewed task branch into the default branch of a private repository you do not share, without asking each time. Push and PR creation still require permission, and adding another such exception needs your confirmation (`AGENTS.md` §1).
+Some rules — the hook checks above and a few working rules in `AGENTS.md` and `CLAUDE.md` (auto commit, worktree requirement, reviews and which models review or write, CLI-first) — can be switched per repository through `agent-settings.env`. Model duties are plain values (`REVIEW_MODEL_*`, `WRITING_MODEL_DEEP`), so usage limits or new models are handled by changing a setting, not by editing the rule documents. Resolution is three layers, later wins: the kit's `agent-settings.env` (defaults) → `agent-settings.env` at the work repository's root → `agent-settings.local.env` there (untracked; add it to the repository's `.gitignore`; use it for personal or temporary switches — except changing the five model-duty keys (`REVIEW_MODEL_*`, `REVIEW_REQUIRE_OTHER_LINEAGE`, `WRITING_MODEL_DEEP`), whose differing local values are rejected; change them in a tracked env file for traceability). The format is plain `KEY=value` lines, read line by line (never sourced as shell), so values may contain spaces and parentheses. The keys and their defaults live in the kit's `agent-settings.env` (commented); each toggleable rule in `AGENTS.md` (or `CLAUDE.md`, for Claude Code specific ones) names its key inline, and the resolution mechanism is defined in `AGENTS.md` §1. Permission boundaries and the evidence rules (e.g. the `--no-verify` ban) are deliberately not toggleable, with one exception: `AUTO_MERGE_PRIVATE`, on by default, lets an agent merge a fully reviewed task branch into the default branch of a private repository you do not share, without asking each time. Push and PR creation still require permission, and adding another such exception needs your confirmation (`AGENTS.md` §1).
 
-### Instant lint on edit (Claude Code)
+### Instant lint on edit (Claude Code / Codex)
 
-In Claude Code, textlint can run right after an agent edits or creates a `.md` file, so the agent fixes findings on the spot. Register the hook below in `~/.claude/settings.json`. It prints nothing when there are no findings. Agent-internal documents such as `_ai/` are excluded.
+Both CLIs can run textlint right after an agent edits or creates a `.md` file, so the agent fixes findings on the spot. The same script serves both: Claude Code passes the edited path as `tool_input.file_path`, Codex passes the whole `apply_patch` text as `tool_input.command`, and the script reads the touched `.md` files from either. It prints nothing when there are no findings. Agent-internal documents such as `_ai/` are excluded.
+
+Claude Code — register in `~/.claude/settings.json`:
 
 ```json
 {
@@ -183,13 +185,44 @@ In Claude Code, textlint can run right after an agent edits or creates a `.md` f
 }
 ```
 
+Codex — the same block goes in `~/.codex/hooks.json` (or a repository's `.codex/hooks.json`); the file edit tool is `apply_patch`, so use that as the matcher:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/agent-kit/scripts/textlint-hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codex runs a hook only after you have reviewed and trusted that exact definition (`/hooks` in a Codex chat; the trust is recorded against the hook's hash, so an edited hook is skipped until trusted again). The field names follow the [Codex hooks documentation](https://learn.chatgpt.com/docs/hooks). Codex CLI 0.153.4 was verified to invoke both the Bash guard and apply_patch lint hook, including their exit-2 findings.
+
 This registration is a manual step each user performs, like the `npm install` above. Commands that run automatically belong in settings a human writes for themselves, so this is not delegated to agents. Claude Code also does not auto-approve an agent writing this setting.
 
-Codex has no equivalent hook mechanism; the Codex side is covered by pre-commit and the `$docs-maintenance` procedure.
+### Explicit model selection
 
-### Agent git guard (Claude Code)
+Configure each role's CLI, model, effort and fallback order in [agent-settings.env](agent-settings.env), using `CLI:MODEL(EFFORT)` entries. Repository settings override the defaults. No model or effort is inferred from the CLI's defaults. Missing CLIs and confirmed authentication, model-availability or rate-limit failures can advance to the next configured candidate; ordinary test failures and review findings cannot. See [review policy](docs/policies/review.md) for the selection and independence rules.
 
-Two rules in `AGENTS.md` have no enforcement point on the git side: the ban on `--no-verify` (a hook cannot prevent its own bypass) and the ban on `git add .` / `-A` / `--all` (git has no hook for staging). `scripts/git-guard-hook.py` closes both for Claude Code by inspecting each Bash command the agent is about to run and blocking the forbidden forms before they execute. It binds only the agent's tool calls; a human typing the same commands in a terminal is unaffected. Register it in `~/.claude/settings.json` (the same manual-registration principle as above applies):
+```sh
+python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/project
+```
+
+This prints the selected candidate, settings source, skipped candidates and an argument array; it does not call an LLM. After changing the kit defaults, run `python3 scripts/sync-model-resolver.py` to refresh standalone Skill copies. Tracked role settings must not be overridden through `agent-settings.local.env`.
+
+
+### Agent git guard (Claude Code / Codex)
+
+Two rules in `AGENTS.md` have no enforcement point on the git side: the ban on `--no-verify` (a hook cannot prevent its own bypass) and the ban on `git add .` / `-A` / `--all` (git has no hook for staging). `scripts/git-guard-hook.py` closes both by inspecting each shell command the agent is about to run and blocking the forbidden forms before they execute. It binds only the agent's tool calls; a human typing the same commands in a terminal is unaffected. Both CLIs report the shell tool as `Bash` with the command in `tool_input.command`, so the registration is the same block in either settings file (`~/.claude/settings.json`, or `~/.codex/hooks.json` for Codex, which then needs the `/hooks` trust step above):
 
 ```json
 {
@@ -208,8 +241,6 @@ Two rules in `AGENTS.md` have no enforcement point on the git side: the ban on `
   }
 }
 ```
-
-Codex has no equivalent pre-execution hook; on the Codex side these two rules remain document-enforced (`AGENTS.md` §5 / §8).
 
 ### Personal environment policy
 

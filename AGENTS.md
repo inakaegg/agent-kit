@@ -9,7 +9,7 @@
 - 変更対象へ適用される、ルートから対象ディレクトリまでの `AGENTS.md`、`CLAUDE.md`、その他の明示的な指示を読む。
 - 本文中の `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は、agent-kit（本ファイルの実体がある場所）内を指す。symlink経由で読んでいる場合は実体の場所を辿る。作業対象プロジェクトの `docs/` とは別物である。
 - 上位の指示を下位の指示が暗黙に弱めてはならない。矛盾があり、結果が実質的に変わる場合は推測で選ばず停止して報告する。
-- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
+- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。例外として担当関連5キー（`REVIEW_MODEL_*`、`REVIEW_REQUIRE_OTHER_LINEAGE`、`WRITING_MODEL_DEEP`）は、localの値が追跡対象の設定と異なれば停止する。これらの値はgit管理下の `agent-settings.env` で変更する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
 - 本ファイルへ、現在のタスクの仕様、試行履歴、技術スタック固有の細則、長い操作手順を追加しない。
 
 ## 2. 情報の正本
@@ -40,7 +40,7 @@
 - AI model・大容量dataのdownload前に保存先と必要容量を確認する。設定済みの保存先が利用不能なら、別の場所へ自動で切り替えず停止する。
 - シークレット、認証情報、個人情報、本番データ、署名鍵を表示、ログ出力、コピー、commitしない。
 - ファイル変更や外部操作の可能性があるサブエージェント・並列エージェントは、ユーザーがそのターンで許可した場合だけ使用する。read-onlyの調査・検索・要約だけを行うサブエージェントは、追加課金となる外部プロセスを起動しない範囲で許可なく使用してよい。ユーザーがBMadのSkillまたはworkflowを起動した場合は、そのworkflowが完了または中止するまで、遂行に必要なサブエージェント・並列エージェントの使用を許可済みとみなす。§7の独立レビューに限り、1段階のレビューにつきリモートに変更を加えない別CLIプロセスを1つ起動してよい。いずれも追加課金が生じる場合は先に確認する。
-- 文書の執筆担当は、pathや拡張子ではなく**主な読者**で判定する。人間を主な読者とする文書はClaude Code自身が執筆・編集し、設計・仕組みの解説文書は深い思考用モデル（`WRITING_MODEL_DEEP` が示す担当）のセッションが書く。AI・agentだけが使う文書は別agentが作成してよいが、規則ファイル（本ファイル、projectの `AGENTS.md`・`CLAUDE.md`）の本文編集は `WRITING_MODEL_DEEP` が示す担当のセッションだけが行う。判定基準と分担の詳細は `docs/policies/writing-and-docs.md` に従う。本項は§1の優先順位を変更せず、最新のユーザー指示が優先する。
+- 文書の執筆担当は、pathや拡張子ではなく**主な読者**で判定する。人間を主な読者とする文書は、そのタスクを担当しているセッション自身が執筆・編集し、担当には、ユーザーが許可した並行体制で対象ファイルの執筆を割り当てられた独立した対話席を含む。未割当の別agentやサブエージェントに代筆させない。設計・仕組みの解説文書は深い思考用モデル（`WRITING_MODEL_DEEP` が示す担当）のセッションが書く。AI・agentだけが使う文書は別agentが作成してよいが、規則ファイル（本ファイル、projectの `AGENTS.md`・`CLAUDE.md`）の本文編集は `WRITING_MODEL_DEEP` が示す担当のセッションだけが行う。判定基準と分担の詳細は `docs/policies/writing-and-docs.md` に従う。本項は§1の優先順位を変更せず、最新のユーザー指示が優先する。
 
 ## 4. 必須の作業ループ
 
@@ -113,7 +113,7 @@
 - 構成図・経路図：`$architecture-diagram`。設計資料・命名の前の対応表作成：`$semantic-generation`
 - CLI優先・実行可能経路の確認・fixture・解説文書：`docs/policies/quality-details.md`
 - 契約・active planの雛形：`templates/TASK.md` と同directoryの `ACTIVE_PLAN.md`。project固有AGENTS・検証基盤の雛形：同directoryの `PROJECT_AGENTS.md`・`VERIFICATION.md` と `scripts/agent-check.example.sh`
-- 複数エージェントの並行作業（2チャット体制）の開始：`$pair-watch`（[pair-watch](https://github.com/inakaegg/pair-watch) プラグイン）。複数セッションで分担する作業は、素のセッション間メッセージやサブエージェント分担ではなくこの体制を既定とする。片方のチャットにだけタスクを渡せば、相手役割の指示はSkillが送る。Codexチャットで起動された側は監視役（Claude）からのinbox指示を待つ。Skill同梱の最低限手順より本kitの契約・レビュー規則が優先される（§1の優先順位どおり）
+- 複数エージェントの並行作業（2チャット体制）の開始：`$pair-watch`（[pair-watch](https://github.com/inakaegg/pair-watch) プラグイン）。複数セッションで分担する作業は、素のセッション間メッセージやサブエージェント分担ではなくこの体制を既定とする。タスクを渡したチャットが監視役になり、実装役の席を自分で起動して指示を送る。Codexの席は監視役（ClaudeまたはCodex）からのinbox指示を待つ。Skill同梱の最低限手順より本kitの契約・レビュー規則が優先される（§1の優先順位どおり）
 - 新しい規則・手順の置き場所判断：`docs/instruction-placement.md`
 - Skillの新規作成・改訂：`docs/skill-authoring.md`
 - 個人PCのmodel保存先、時刻・log既定：存在する場合だけ `~/.codex/local-policies/local-environment.md`（これはkit外の個人設定で、Codex利用者のみ）

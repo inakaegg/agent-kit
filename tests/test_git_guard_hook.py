@@ -46,6 +46,19 @@ class GitGuardHookTests(unittest.TestCase):
     def test_non_bash_tool_passes(self):
         self.assertEqual(run_hook("Read", "git add ."), 0)
 
+    def test_codex_shaped_payload_is_blocked_too(self):
+        # Codex hooks は同じ tool_name / tool_input.command に加えて
+        # hook_event_name・turn_id 等を載せる。余分な項目があっても判定は変わらない。
+        payload = json.dumps({
+            "session_id": "s", "turn_id": "t", "cwd": "/repo",
+            "hook_event_name": "PreToolUse", "tool_name": "Bash",
+            "tool_input": {"command": "git add -A && git commit -m x --no-verify"},
+        })
+        result = subprocess.run(
+            ["python3", str(HOOK)], input=payload, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 2)
+
     def test_invalid_json_passes(self):
         result = subprocess.run(
             ["python3", str(HOOK)], input="not json", capture_output=True, text=True,

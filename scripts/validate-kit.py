@@ -213,6 +213,7 @@ def main() -> None:
     validate_claude_adapter()
     validate_no_private_source_copy()
     validate_verification_source()
+    subprocess.run([sys.executable, str(ROOT / "scripts/sync-model-resolver.py"), "--check"], check=True)
     print("PASS: common agent kit is structurally valid")
 
 

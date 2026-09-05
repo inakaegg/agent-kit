@@ -26,11 +26,14 @@ description: >-
 - **通常対象作業**（それ以外のユーザー可視動作、PR化する非自明な変更）：仕様と実装計画を1つのレビューにまとめて通し（gate 1+2）、実装後に実装レビュー。
 - **動作に影響する小さな変更**（設定値1つ、規則文書の1段落以内の追記、1関数内の修正など）：実装レビューのみ。**動作に影響しない変更**（誤字・書式・コメント・文書の言い回し）：レビューなし（`AGENTS.md` §7）。
 
-reviewerのモデルとreasoning effort：
+reviewerのCLI・実モデル・思考量・候補順は、用途に対応する `REVIEW_MODEL_HEAVY`、`REVIEW_MODEL_DEFAULT`、`REVIEW_MODEL_READABILITY` の設定だけから選ぶ。本文へ既定モデルや思考量を固定しない。
 
-- 担当にできるモデルは agent-settings のキーが決める（重リスク作業 `REVIEW_MODEL_HEAVY`・通常対象作業 `REVIEW_MODEL_DEFAULT`・読みやすさ `REVIEW_MODEL_READABILITY`。書式は `docs/policies/review.md`）。その範囲内で実装担当と別のモデルを優先し、モデル独立性とコストの両立を図る。
-- 設定値が「系統(思考量)」の形で思考量を指定している場合は、その思考量を正本として使う。
-- 設定値に思考量の指定がない場合の既定：仕様・実装計画レビューは中位、実装レビューは中位を既定とし重リスク作業だけ高位へ上げる。reviewは検査であり生成ではないため、指定がない限り実装と同じ最高設定にしない。
+1. 同梱の `python3 scripts/resolve-agent-model.py --key <用途キー> --repo <作業repoのroot>` を実行する。full kitではkitの設定、単体配布では `references/model-defaults.env` を既定とし、repo設定を優先する。既定設定のコピーはkit側で生成する。直接編集しない。
+2. 出力された `candidate`、`source`、`skipped` を記録し、`argv` の配列からreviewerを起動する。CLIの既定モデルへ任せず、コマンド文字列へ再連結してevalしない。必要なread-onlyのtools・資料・出力先は後続の規則に従って加える。
+3. CLI未導入はresolverが自動除外する。起動後に認証不能・モデル利用不可・利用上限を明確に観測した場合だけ、証跡とともに `--unavailable '<candidate>=<reason>'` を追加して再解決する。reasonは `authentication`、`model-unavailable`、`rate-limit`。各候補は1回だけ試し、利用不能と分かっている候補を同じtask中に再試行しない。レビュー指摘、検査失敗、一般的な非ゼロ終了、無出力や時間経過だけでは切り替えない。
+4. 設定された候補への切り替えは自動で行い、CLI・モデル・思考量・理由を報告する。候補外のモデルや追加課金の経路へ切り替えない。全候補が使えない場合は停止し、使える担当が必要なことを報告する。
+5. `REVIEW_REQUIRE_OTHER_LINEAGE=true` の重リスクレビューでは `--implementer-cli` を渡す。別系統を優先し、使えない場合だけ同系統を `provisional=true` として選ぶ。暫定通過と別系統でのやり直し残件を契約に記録する。falseなら指定順を優先し、片方しかない環境でも履歴を共有しない別セッションのレビューで完了できる。独立した別セッションという条件は常に維持する。
+
 
 ## 1. 独立性
 
