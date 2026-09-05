@@ -34,6 +34,7 @@
 - read-onlyの `git status`、`git diff`、`git log`、検索、テスト実行は必要に応じて行ってよい。
 - push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。例外として `AUTO_MERGE_PRIVATE=true` のとき、他者と共有しない非公開repositoryでは、必要なレビューをすべて通したtask branchのdefault branchへのローカルmerge（`--no-ff`）を許可なく行ってよい。同系統での暫定通過中は「通した」に当たらない。pushとPRはこの例外に含めない。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成を許可するが、merge、base branchへのpush、public化を許可しない。
+- **remoteの無いlocal repositoryの初回push（remote repositoryの作成を含む）と、既存repositoryのpublic化は、エージェントが一切行わない（NEVER）。** これらはユーザー自身が行う。方針への同意、「準備して」「進めて」、提案文中の「許可が要ります」への返事は許可にならない。例外は、ユーザーがその発話で対象のrepositoryを名指しし、その操作そのものを直接指示した場合だけとし、そのときは `AGENT_USER_DIRECTED=1` を前置してコマンドを実行する（`scripts/git-guard-hook.py` が機械的に遮断するため）。
 - 新規のrepository、package、container、bucket等はprivateを既定とする。public化は対象と範囲を明示した許可がある場合だけ行う。
 - クラウド上の構成はIaCを基本とする。Terraform等のコードによる宣言をリポジトリ内の正本とし、dashboardやCLIの手作業だけで作った資産を残さない。手作業が避けられない場合は、対象と理由を記録し、後からIaCへ取り込む。IaCの適用（apply）はクラウド設定変更にあたるため、前項までと同じく明示許可を必要とする。
 - 課金し得るAPI、GPU job、大量ダウンロード、有料smoke testは、目的、概算費用、上限、代替案を示し、その実行について明示確認を得る。

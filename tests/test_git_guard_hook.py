@@ -59,6 +59,38 @@ class GitGuardHookTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 2)
 
+    # §3: remote repositoryの作成・初回push・public化はユーザーが行う
+    def test_gh_repo_create_is_blocked(self):
+        self.assertEqual(run_hook("Bash", "cd /tmp/x && gh repo create me/x --private --source . --push"), 2)
+
+    def test_gh_repo_edit_visibility_is_blocked(self):
+        self.assertEqual(run_hook("Bash", "gh repo edit me/x --visibility public --accept-visibility-change-consequences"), 2)
+
+    def test_gh_api_visibility_is_blocked(self):
+        self.assertEqual(run_hook("Bash", "gh api -X PATCH repos/me/x -f visibility=public"), 2)
+
+    def test_git_push_set_upstream_is_blocked(self):
+        self.assertEqual(run_hook("Bash", "git push -u origin main"), 2)
+        self.assertEqual(run_hook("Bash", "git push --set-upstream origin feat/x"), 2)
+
+    def test_git_remote_add_is_blocked(self):
+        self.assertEqual(run_hook("Bash", "git remote add origin git@github.com:me/x.git"), 2)
+
+    def test_plain_push_to_existing_upstream_passes(self):
+        self.assertEqual(run_hook("Bash", "git push origin feat/x"), 0)
+        self.assertEqual(run_hook("Bash", "git push"), 0)
+
+    def test_gh_repo_view_and_other_edits_pass(self):
+        self.assertEqual(run_hook("Bash", "gh repo view me/x --json visibility"), 0)
+        self.assertEqual(run_hook("Bash", "gh repo edit me/x --description 'x'"), 0)
+
+    def test_user_directed_prefix_allows_remote_create(self):
+        self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 gh repo create me/x --private --source . --push"), 0)
+        self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git push -u origin main"), 0)
+
+    def test_user_directed_prefix_does_not_unlock_other_rules(self):
+        self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git add --all"), 2)
+
     def test_invalid_json_passes(self):
         result = subprocess.run(
             ["python3", str(HOOK)], input="not json", capture_output=True, text=True,
