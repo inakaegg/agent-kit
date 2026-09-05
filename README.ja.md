@@ -364,10 +364,23 @@ python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/
 
 ### エージェントのgitコマンドガード（Claude Code / Codex）
 
-`AGENTS.md` の規則のうち2つは、git側に強制できる地点がありません。`--no-verify` の
-禁止（hookは自分自身の回避を防げない）と、`git add .` / `-A` / `--all` の禁止
-（addにはhookがない）です。`scripts/git-guard-hook.py` は、エージェントが実行しようと
-するshellコマンドを実行前に検査し、この2つの禁止形を遮断します。効くのはエージェントの
+`AGENTS.md` の規則のうち3つは、git側に強制できる地点がありません。1つ目は `--no-verify` の
+禁止（hookは自分自身の回避を防げない）。2つ目は `git add .` / `-A` / `--all` の禁止
+（addにはhookがない）。3つ目は「remote repositoryの作成、remoteの無いrepositoryの初回push、
+既存repositoryのpublic化はユーザー自身が行い、エージェントは行わない」という規則です。
+`scripts/git-guard-hook.py` は、エージェントが実行しようとするshellコマンドを実行前に検査し、
+この3つの禁止形を遮断します。3つ目で遮断する形は次のとおりです。
+
+- `gh repo create` / `new` / `fork`
+- `gh repo edit --visibility public`
+- `gh api` での `visibility=public` / `private=false` の書き込み、および `--input` によるrepository設定の更新
+- remoteの無いrepositoryでの `git push` と `git remote add`（`cd` や `git -C` で移った先を基準に判定）
+- URLを直接指定する `git push`
+
+既存のremoteへ新しいbranchを `git push -u` する通常の操作は通ります。検査するのは実行位置の
+コマンドだけなので、heredocや `grep` の中に同じ文字列があっても止まりません。ユーザーがその発話で
+remote作成系の操作を直接指示したときだけ、エージェントはコマンドの先頭に `AGENT_USER_DIRECTED=1`
+を置いて実行します。この印は記録に残り、通せる操作は1コマンドにつき1つです。効くのはエージェントの
 ツール呼び出しだけで、人間がターミナルで打つ同じコマンドには影響しません。
 どちらのCLIもshellのツール名を `Bash`、コマンドを `tool_input.command` で渡すので、
 登録は同じ形です。Claude Codeは `~/.claude/settings.json`、Codexは `~/.codex/hooks.json`
