@@ -210,6 +210,23 @@ class GitGuardHookTests(unittest.TestCase):
         self.assertEqual(run_hook("Bash", "gh repo create --help"), 0)
         self.assertEqual(run_hook("Bash", "gh repo fork --help"), 0)
 
+    # 4巡目の指摘: 暗黙の POST、push の値付き option、command substitution
+    def test_gh_api_with_fields_defaults_to_post(self):
+        self.assertEqual(run_hook("Bash", "gh api user/repos -f name=new-project -F private=true"), 2)
+        self.assertEqual(run_hook("Bash", "gh api repos/me/x -f visibility=public"), 2)
+        self.assertEqual(run_hook("Bash", "gh api repos/me/x/issues -f title=x"), 0)
+
+    def test_push_value_options_are_consumed_before_the_repository(self):
+        d = self.repo(with_remote=True)
+        self.assertEqual(run_hook("Bash", "git push -o ci.skip https://example.invalid/new.git HEAD", cwd=d), 2)
+        self.assertEqual(run_hook("Bash", "git push --repo https://example.invalid/new.git HEAD", cwd=d), 2)
+        self.assertEqual(run_hook("Bash", "git push -o ci.skip origin HEAD", cwd=d), 0)
+
+    def test_command_substitution_is_inspected(self):
+        self.assertEqual(run_hook("Bash", 'echo "$(gh repo create me/x --public)"'), 2)
+        self.assertEqual(run_hook("Bash", "x=`gh repo new me/x`"), 2)
+        self.assertEqual(run_hook("Bash", 'echo "$(gh repo view me/x --json name)"'), 0)
+
     def test_user_directed_prefix_does_not_unlock_other_rules(self):
         self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git add --all"), 2)
 

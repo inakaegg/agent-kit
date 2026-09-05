@@ -225,6 +225,9 @@ def check_gh(words: list[str]) -> str | None:
         elif endpoint is None:
             endpoint = w
         j += 1
+    # field を付けて method を省くと gh api は POST で送る（gh api --help）
+    if fields and method == "GET" and not any(w in ("-X", "--method") or w.startswith(("-X", "--method=")) for w in words):
+        method = "POST"
     if method not in WRITE_METHODS:
         return None
     if endpoint and REPO_CREATE_ENDPOINT.match(endpoint):
@@ -280,7 +283,28 @@ def check_git(words: list[str], current: str | None) -> str | None:
         options = rest[1:]
         if any(w in ("-n", "--dry-run") for w in options):
             return None
-        args = [w for w in options if not w.startswith("-")]
+        args: list[str] = []
+        k = 0
+        while k < len(options):
+            w = options[k]
+            if w in ("--repo",) and k + 1 < len(options):
+                # --repo <url> は repository の指定そのもの
+                args.insert(0, options[k + 1])
+                k += 2
+                continue
+            if w.startswith("--repo="):
+                args.insert(0, w.split("=", 1)[1])
+                k += 1
+                continue
+            if w in ("-o", "--push-option", "--receive-pack", "--exec") and k + 1 < len(options):
+                k += 2
+                continue
+            if w.startswith("-o") and len(w) > 2 and not w.startswith("--"):
+                k += 1
+                continue
+            if not w.startswith("-"):
+                args.append(w)
+            k += 1
         if args and (UNSAFE_VALUE.search(args[0]) or is_repository_url(args[0])):
             return ("URLや展開される値を直接指定する git push は禁止（remoteの無いrepositoryの初回pushに当たる。"
                     "共通AGENTS.md §3）。")
@@ -329,9 +353,46 @@ def check_remote_create(words: list[str], current: str | None, depth: int = 0) -
     return None
 
 
-def remote_create_violations(command: str, cwd: str) -> list[str]:
+def substitutions(command: str) -> list[str]:
+    """`$( … )` と backtick の中身。shell はこれらも実行する。入れ子は再帰で拾う。"""
+    found: list[str] = []
+    i = 0
+    while i < len(command):
+        if command.startswith("$(", i):
+            depth, j = 1, i + 2
+            while j < len(command) and depth:
+                if command.startswith("$(", j):
+                    depth += 1
+                    j += 2
+                    continue
+                if command[j] == "(":
+                    depth += 1
+                elif command[j] == ")":
+                    depth -= 1
+                j += 1
+            inner = command[i + 2:j - 1] if depth == 0 else command[i + 2:]
+            found.append(inner)
+            found.extend(substitutions(inner))
+            i = j
+            continue
+        if command[i] == "`":
+            j = command.find("`", i + 1)
+            if j < 0:
+                found.append(command[i + 1:])
+                break
+            found.append(command[i + 1:j])
+            i = j + 1
+            continue
+        i += 1
+    return found
+
+
+def remote_create_violations(command: str, cwd: str, depth: int = 0) -> list[str]:
     violations: list[str] = []
     current: str | None = cwd if os.path.isdir(cwd) else None
+    if depth < 5:
+        for inner in substitutions(command):
+            violations.extend(remote_create_violations(inner, cwd, depth + 1))
     for segment in SEGMENT_SPLIT.split(command):
         words = strip_env_assignments(split_words(segment))
         if not words:
