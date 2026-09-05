@@ -13,6 +13,9 @@ tool_name は "Bash"、コマンドは tool_input.command に入る。§3の判�
 違反時はexit 2（ブロック。stderrがエージェントへ渡る）、それ以外はexit 0。
 人間のターミナル操作には一切効かない（エージェントのツール呼び出し専用）。
 登録方法はagent-kit READMEのGit hooks節を参照。
+
+このhookはshellの完全な構文解析器ではない。決められない値（変数展開・副shell・本文を
+読めない入力）は「安全と証明できない」として遮断する側に倒す。
 """
 import json
 import os
@@ -39,23 +42,50 @@ RULES = [
 
 # --- §3 remote repositoryの作成・初回push・public化 ------------------------------------
 #
-# 文字列の検索ではなく、コマンド区間（&& ; | 改行で区切った1つ）を shell の語に分けてから、
+# 文字列の検索ではなく、コマンド区間（&& || ; | & 改行で区切った1つ）を shell の語に分けてから、
 # 先頭の語（と `cd` で移る実効directory）を見る。引用符の中や heredoc の本文に同じ文字列が
-# あっても、実行位置に無ければ遮断しない。ただし文字列を別のshellへ渡して実行する形
-# （bash -c, eval, xargs 等）は中身を実行位置とみなす。
+# あっても、実行位置に無ければ遮断しない。ただし文字列や heredoc を別のshellへ渡して実行する形
+# （bash -c, eval, bash <<EOF, xargs 等）は中身を実行位置とみなす。
 
-SEGMENT_SPLIT = re.compile(r"&&|\|\||[;|\n]")
-URL_LIKE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://|[^/@\s]+@[^/:\s]+:)")
-INTERPRETERS = {"bash", "sh", "zsh", "fish", "eval", "exec", "xargs", "env", "nohup", "time",
-                "python", "python3", "node", "perl", "ruby", "osascript"}
+# `&&` `||` `;` `|` 改行、および単独の `&`（`2>&1` `&>` `>&` の `&` は除く）
+SEGMENT_SPLIT = re.compile(r"&&|\|\||[;|\n]|(?<![>&<|])&(?![&>])")
+# 文字列をshellとして実行するもの: 引数の文字列の中身を検査する
+SHELL_INTERPRETERS = {"bash", "sh", "zsh", "fish", "dash", "ksh", "eval"}
+# 後続のargvをそのまま1つのコマンドとして実行するもの: option と代入を除いた残りを検査する
+COMMAND_WRAPPERS = {"env", "exec", "nohup", "time", "xargs", "sudo", "doas", "command", "builtin",
+                    "nice", "ionice", "caffeinate", "timeout", "gtimeout", "stdbuf", "script"}
+# 別の言語の文字列実行。中身の解析はしないので、保護対象の語が入っていれば厳しい側に倒す
+FOREIGN_INTERPRETERS = {"python", "python3", "node", "perl", "ruby", "osascript"}
+FOREIGN_SUSPECT = re.compile(r"\bgh\s+(?:repo|api)\b|\bgit\s+(?:push|remote|config)\b")
+UNSAFE_VALUE = re.compile(r"[$`]")
 REPO_UPDATE_ENDPOINT = re.compile(r"^/?repos/[^/\s]+/[^/\s]+/?$")
+REPO_CREATE_ENDPOINT = re.compile(
+    r"^/?(?:user/repos|users/[^/\s]+/repos|orgs/[^/\s]+/repos"
+    r"|repos/[^/\s]+/[^/\s]+/(?:forks|generate))/?$"
+)
 WRITE_METHODS = {"PATCH", "POST", "PUT", "DELETE"}
+GH_API_VALUE_OPTIONS = {"-X", "--method", "-f", "-F", "--field", "--raw-field", "-H", "--header",
+                        "--hostname", "-q", "--jq", "-t", "--template", "--cache", "-p", "--preview",
+                        "--input"}
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n(.*?)\n\2(?=\n|$)", re.S)
 
 
 def normalize(command: str) -> str:
-    """バックスラッシュ改行の継続行を1行にし、heredoc の本文を落とす（実行位置ではない）。"""
+    """継続行を1行にし、heredoc を処理する。
+
+    heredoc の本文は普通はデータなので落とす。ただし本文を shell が実行する形
+    （`bash <<'EOF'` など、その行の先頭コマンドが shell）では、本文を実行区間として残す。
+    """
     command = re.sub(r"\\\r?\n", " ", command)
-    return re.sub(r"<<-?\s*['\"]?(\w+)['\"]?\n.*?\n\1(?=\n|$)", " ", command, flags=re.S)
+
+    def replace(match: re.Match) -> str:
+        start = command.rfind("\n", 0, match.start()) + 1
+        head_words = strip_env_assignments(split_words(command[start:match.start()]))
+        if head_words and head_words[0] in SHELL_INTERPRETERS:
+            return "\n" + match.group(3) + "\n"
+        return " "
+
+    return HEREDOC.sub(replace, command)
 
 
 def has_remote(directory: str | None) -> bool:
@@ -100,7 +130,7 @@ def resolve_dir(base: str | None, target: str) -> str | None:
 
 
 def git_effective_dir(words: list[str], current: str | None) -> tuple[str | None, list[str]]:
-    """`git -C <dir>` 等のglobal optionを読み、実効directoryとsubcommand以降の語を返す。"""
+    """`git -C <dir>` / `--git-dir` 等のglobal optionを読み、実効directoryとsubcommand以降の語を返す。"""
     i = 1
     directory = current
     while i < len(words):
@@ -111,7 +141,14 @@ def git_effective_dir(words: list[str], current: str | None) -> tuple[str | None
         elif w.startswith("-C") and len(w) > 2:
             directory = resolve_dir(directory, w[2:])
             i += 1
-        elif w in ("-c", "--git-dir", "--work-tree", "--namespace") and i + 1 < len(words):
+        elif w in ("--git-dir", "--work-tree") and i + 1 < len(words):
+            directory = repo_dir_from_git_dir(directory, words[i + 1], w)
+            i += 2
+        elif w.startswith(("--git-dir=", "--work-tree=")):
+            name, _, value = w.partition("=")
+            directory = repo_dir_from_git_dir(directory, value, name)
+            i += 1
+        elif w in ("-c", "--namespace", "--exec-path") and i + 1 < len(words):
             i += 2
         elif w.startswith("-"):
             i += 1
@@ -120,8 +157,20 @@ def git_effective_dir(words: list[str], current: str | None) -> tuple[str | None
     return directory, words[i:]
 
 
+def repo_dir_from_git_dir(base: str | None, value: str, option: str) -> str | None:
+    resolved = resolve_dir(base, value)
+    if resolved is None:
+        return None
+    if option == "--work-tree":
+        return resolved
+    # `--git-dir x/.git` は x のrepository。それ以外の形（bare 等）は判定不能として厳しい側へ
+    if os.path.basename(resolved) == ".git":
+        return os.path.dirname(resolved)
+    return None
+
+
 def check_gh(words: list[str]) -> str | None:
-    if len(words) < 2:
+    if len(words) < 2 or "--help" in words or "-h" in words:
         return None
     if words[1] == "repo" and len(words) >= 3:
         if words[2] in ("create", "new", "fork"):
@@ -133,7 +182,9 @@ def check_gh(words: list[str]) -> str | None:
                     value = words[j + 1]
                 elif w.startswith("--visibility="):
                     value = w.split("=", 1)[1]
-                if value is not None and value.lower() == "public":
+                if value is None:
+                    continue
+                if value.lower() == "public" or UNSAFE_VALUE.search(value):
                     return "gh repo edit --visibility public は禁止（public化はユーザーが行う。共通AGENTS.md §3）。"
         return None
     if words[1] != "api":
@@ -149,7 +200,9 @@ def check_gh(words: list[str]) -> str | None:
             method = words[j + 1].upper()
             j += 2
             continue
-        if w.startswith("--method="):
+        if w.startswith("-X") and len(w) > 2:
+            method = w[2:].upper()
+        elif w.startswith("--method="):
             method = w.split("=", 1)[1].upper()
         elif w in ("-f", "-F", "--field", "--raw-field") and j + 1 < len(words):
             fields.append(words[j + 1])
@@ -157,18 +210,33 @@ def check_gh(words: list[str]) -> str | None:
             continue
         elif w.startswith(("--field=", "--raw-field=")):
             fields.append(w.split("=", 1)[1])
+        elif w.startswith(("-f", "-F")) and len(w) > 2 and not w.startswith("--"):
+            fields.append(w[2:])
         elif w == "--input":
             uses_input = True
             j += 1
         elif w.startswith("--input="):
             uses_input = True
-        elif not w.startswith("-") and endpoint is None:
+        elif w in GH_API_VALUE_OPTIONS and j + 1 < len(words):
+            j += 2
+            continue
+        elif w.startswith("-"):
+            pass
+        elif endpoint is None:
             endpoint = w
         j += 1
     if method not in WRITE_METHODS:
         return None
+    if endpoint and REPO_CREATE_ENDPOINT.match(endpoint):
+        return "gh api で repository を作る endpoint への書き込みは禁止（remote repositoryの作成はユーザーが行う。共通AGENTS.md §3）。"
+    if endpoint is None and uses_input:
+        return "gh api の endpoint を決められない --input 付きの書き込みは禁止（本文を検査できないため。共通AGENTS.md §3）。"
     for f in fields:
         key, _, value = f.partition("=")
+        if key not in ("visibility", "private"):
+            continue
+        if value.startswith("@") or UNSAFE_VALUE.search(value):
+            return f"gh api で {key} をファイルや展開で渡すのは禁止（値を検査できないため。共通AGENTS.md §3）。"
         if key == "visibility" and value.lower() == "public":
             return "gh api で visibility=public を書くのは禁止（public化はユーザーが行う。共通AGENTS.md §3）。"
         if key == "private" and value.lower() == "false":
@@ -179,7 +247,17 @@ def check_gh(words: list[str]) -> str | None:
     return None
 
 
+def is_repository_url(arg: str) -> bool:
+    """git push の1つ目の引数が、名前付きremoteではなく repository の場所そのものか。"""
+    if "://" in arg or arg.startswith(("/", "./", "../", "~")):
+        return True
+    # scp-style `host:path` / `user@host:path`（refspec の `a:b` は1つ目の引数には来ない）
+    return ":" in arg
+
+
 def check_git(words: list[str], current: str | None) -> str | None:
+    if "--help" in words or "-h" in words:
+        return None
     directory, rest = git_effective_dir(words, current)
     if not rest:
         return None
@@ -192,10 +270,19 @@ def check_git(words: list[str], current: str | None) -> str | None:
             return ("remoteの無いrepositoryへの git remote add は禁止"
                     "（remoteの登録と初回pushはユーザーが行う。共通AGENTS.md §3）。")
         return None
+    if sub == "config":
+        keys = [w for w in rest[1:] if re.match(r"^remote\.[^.]+\.(?:url|pushurl)$", w, re.I)]
+        if keys and not has_remote(directory):
+            return ("remoteの無いrepositoryへ git config で remote.*.url を書くのは禁止"
+                    "（remoteの登録と初回pushはユーザーが行う。共通AGENTS.md §3）。")
+        return None
     if sub == "push":
-        args = [w for w in rest[1:] if not w.startswith("-")]
-        if any(URL_LIKE.match(a) for a in args):
-            return ("URLを直接指定する git push は禁止（remoteの無いrepositoryの初回pushに当たる。"
+        options = rest[1:]
+        if any(w in ("-n", "--dry-run") for w in options):
+            return None
+        args = [w for w in options if not w.startswith("-")]
+        if args and (UNSAFE_VALUE.search(args[0]) or is_repository_url(args[0])):
+            return ("URLや展開される値を直接指定する git push は禁止（remoteの無いrepositoryの初回pushに当たる。"
                     "共通AGENTS.md §3）。")
         if not has_remote(directory):
             return ("remoteの無いrepositoryからの git push は禁止（初回pushはユーザーが行う。"
@@ -203,22 +290,42 @@ def check_git(words: list[str], current: str | None) -> str | None:
     return None
 
 
-def check_remote_create(words: list[str], current: str | None) -> str | None:
+def strip_wrapper(words: list[str]) -> list[str]:
+    """env / exec / nohup 等を剥がし、実際に実行されるargvを返す。"""
+    rest = words[1:]
+    while rest and (rest[0].startswith("-") or re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", rest[0])):
+        # timeout <秒> のように値を1つ取る形は、数字の語も読み飛ばす
+        rest = rest[1:]
+    while rest and re.match(r"^\d+(?:\.\d+)?[smhd]?$", rest[0]):
+        rest = rest[1:]
+    return rest
+
+
+def check_remote_create(words: list[str], current: str | None, depth: int = 0) -> str | None:
     """1区間の語列を見て、§3 に当たれば理由を返す。"""
     words = strip_env_assignments(words)
-    if not words:
+    if not words or depth > 5:
         return None
-    head = words[0]
+    head = os.path.basename(words[0])
     if head == "gh":
         return check_gh(words)
     if head == "git":
         return check_git(words, current)
-    if head in INTERPRETERS:
-        # 別のshellへ渡した文字列は実行位置。中身を語に分け直して見る
+    if head in COMMAND_WRAPPERS:
+        return check_remote_create(strip_wrapper(words), current, depth + 1)
+    if head in SHELL_INTERPRETERS:
+        # 別のshellへ渡した文字列は実行位置。中身を区間に分け直して見る
         for w in words[1:]:
-            inner = check_remote_create(split_words(w), current)
-            if inner:
-                return inner
+            for segment in SEGMENT_SPLIT.split(w):
+                inner = check_remote_create(split_words(segment), current, depth + 1)
+                if inner:
+                    return inner
+        return None
+    if head in FOREIGN_INTERPRETERS:
+        for w in words[1:]:
+            if FOREIGN_SUSPECT.search(w):
+                return ("別の言語の文字列に gh repo / gh api / git push 等が含まれている（中身を検査できないため遮断。"
+                        "共通AGENTS.md §3）。")
     return None
 
 

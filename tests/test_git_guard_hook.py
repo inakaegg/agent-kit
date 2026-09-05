@@ -156,6 +156,60 @@ class GitGuardHookTests(unittest.TestCase):
         self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git push -u origin main", cwd=d), 0)
         self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 gh repo create A --private && gh repo edit B --visibility public"), 2)
 
+    # 3巡目の指摘: 演算子・wrapper・結合flag・間接入力・scp形式・API endpoint・--git-dir・git config
+    def test_single_ampersand_separates_commands(self):
+        self.assertEqual(run_hook("Bash", "true & gh repo create me/x --public"), 2)
+        self.assertEqual(run_hook("Bash", "cmd 2>&1 | grep x"), 0)
+
+    def test_wrappers_hand_argv_to_the_command(self):
+        self.assertEqual(run_hook("Bash", "env FOO=bar gh repo create me/x --public"), 2)
+        self.assertEqual(run_hook("Bash", "nohup gh repo new me/x"), 2)
+        self.assertEqual(run_hook("Bash", "timeout 30 gh repo fork o/p"), 2)
+        self.assertEqual(run_hook("Bash", "/opt/homebrew/bin/gh repo create me/x"), 2)
+
+    def test_gh_api_combined_flags_and_indirect_values(self):
+        self.assertEqual(run_hook("Bash", "gh api -XPATCH repos/me/x -f visibility=public"), 2)
+        self.assertEqual(run_hook("Bash", "gh api -X PATCH repos/me/x -F visibility=@visibility.txt"), 2)
+        self.assertEqual(run_hook("Bash", "gh api -X PATCH repos/me/x -f visibility=\"$VIS\""), 2)
+        self.assertEqual(run_hook("Bash", "gh api --hostname ghe.example.com -X PATCH repos/me/x --input payload.json"), 2)
+
+    def test_gh_api_repository_creation_endpoints_are_blocked(self):
+        self.assertEqual(run_hook("Bash", "gh api -X POST user/repos -f name=new-project -F private=true"), 2)
+        self.assertEqual(run_hook("Bash", "gh api -X POST orgs/acme/repos -f name=x"), 2)
+        self.assertEqual(run_hook("Bash", "gh api -X POST repos/o/p/forks"), 2)
+        self.assertEqual(run_hook("Bash", "gh api user/repos"), 0)
+
+    def test_gh_repo_edit_with_expanded_visibility_is_blocked(self):
+        self.assertEqual(run_hook("Bash", 'gh repo edit me/x --visibility "$VISIBILITY" --accept-visibility-change-consequences'), 2)
+
+    def test_scp_style_url_without_user_is_blocked(self):
+        d = self.repo(with_remote=True)
+        self.assertEqual(run_hook("Bash", "git push example.invalid:me/new.git HEAD", cwd=d), 2)
+        self.assertEqual(run_hook("Bash", "git push /tmp/other-repo main", cwd=d), 2)
+        self.assertEqual(run_hook("Bash", "git push origin HEAD:refs/heads/x", cwd=d), 0)
+
+    def test_git_dir_option_selects_the_repository(self):
+        outer = self.repo(with_remote=True)
+        inner = self.repo(with_remote=False)
+        self.assertEqual(run_hook("Bash", f"git --git-dir {inner}/.git remote add origin https://example.invalid/n.git", cwd=outer), 2)
+        self.assertEqual(run_hook("Bash", f"git --git-dir={inner}/.git push -u origin main", cwd=outer), 2)
+
+    def test_git_config_remote_url_counts_as_registering_a_remote(self):
+        empty = self.repo(with_remote=False)
+        self.assertEqual(run_hook("Bash", "git config remote.origin.url https://example.invalid/new.git", cwd=empty), 2)
+        existing = self.repo(with_remote=True)
+        self.assertEqual(run_hook("Bash", "git config remote.origin.url https://example.invalid/moved.git", cwd=existing), 0)
+        self.assertEqual(run_hook("Bash", "git config user.name x", cwd=empty), 0)
+
+    def test_heredoc_fed_to_a_shell_is_executed(self):
+        self.assertEqual(run_hook("Bash", "bash <<'EOF'\ngh repo create me/x --public\nEOF"), 2)
+
+    def test_dry_run_push_and_help_pass(self):
+        d = self.repo(with_remote=False)
+        self.assertEqual(run_hook("Bash", "git push --dry-run https://example.invalid/new.git HEAD", cwd=d), 0)
+        self.assertEqual(run_hook("Bash", "gh repo create --help"), 0)
+        self.assertEqual(run_hook("Bash", "gh repo fork --help"), 0)
+
     def test_user_directed_prefix_does_not_unlock_other_rules(self):
         self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git add --all"), 2)
 
