@@ -61,7 +61,10 @@ run_agent_check() {
   [ "$(git config --local --type=bool --default=false hooks.runAgentCheck 2>/dev/null)" = "true" ] || return 0
   [ -x scripts/agent-check.sh ] || return 0
   echo "pre-push: $(pwd)/scripts/agent-check.sh fast を実行します（hooks.runAgentCheck=true）" >&2
-  if ! scripts/agent-check.sh fast; then
+  # gitはhookへ GIT_DIR / GIT_WORK_TREE 等の絶対パスを渡す。そのまま検査scriptへ継承させると、
+  # 使い捨てrepoを作るテストのgit操作までこのrepoへ向く（branchへの空commit、余分なworktree）。
+  # 検査scriptはcwd（このrepoのroot）からgitを解決できるので、起動前にこれらを外す。
+  if ! env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_OBJECT_DIRECTORY -u GIT_COMMON_DIR -u GIT_PREFIX -u GIT_ALTERNATE_OBJECT_DIRECTORIES scripts/agent-check.sh fast; then
     {
       echo ""
       echo "pre-push: scripts/agent-check.sh fast が失敗したためpushを中止しました。"

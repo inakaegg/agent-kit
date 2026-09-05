@@ -59,5 +59,24 @@ class PrePushAgentCheckTests(unittest.TestCase):
         self.assertEqual(run_hook(repo), 0)
 
 
+    def test_opted_in_script_does_not_inherit_the_hooks_git_environment(self):
+        # gitはhookへ GIT_DIR 等を渡す。それが検査scriptの子プロセスまで届くと、使い捨てrepoを
+        # 作るテストのgit操作が実repoへ向く（agent-kit e72f8b1 / pair-watch a8020cc で個別対処
+        # していた事故）。hookは検査scriptを起動する前にこれらを外す。
+        repo = make_repo(self, check_exit=0)
+        seen = repo / "seen-env.txt"
+        (repo / "scripts" / "agent-check.sh").write_text(
+            "#!/bin/sh\nenv | grep '^GIT_' > \"$1\"; exit 0\n".replace("$1", str(seen)), encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "config", "--local", "hooks.runAgentCheck", "true"], check=True, env=clean_env())
+        env = dict(clean_env(), GIT_DIR=str(repo / ".git"), GIT_WORK_TREE=str(repo),
+                   GIT_INDEX_FILE=str(repo / ".git" / "index"), GIT_PREFIX="")
+        result = subprocess.run(["sh", str(HOOK), "origin", "https://example.invalid/x.git"],
+                                cwd=repo, input="", capture_output=True, text=True, env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        leaked = [line.split("=", 1)[0] for line in seen.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual([v for v in leaked if v in DROP], [], leaked)
+        # gitの動作そのものを決める変数（configの隔離など）は残る
+        self.assertIn("GIT_CONFIG_GLOBAL", leaked)
+
 if __name__ == "__main__":
     unittest.main()
