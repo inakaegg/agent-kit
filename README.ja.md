@@ -356,7 +356,7 @@ Codex CLI 0.153.4で、Bashの実行前ガードとapply_patch後のlintが呼�
 python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/project
 ```
 
-このコマンドは、選んだ候補、設定元、除外した候補、実行引数を出力します。LLMは呼びません。kitの既定値を変えたら `python3 scripts/sync-model-resolver.py` で単体配布用Skillのコピーを同期します。担当設定を変更する場合は、git管理外の `agent-settings.local.env` へ書かず、git管理下の設定へ記録してください。
+このコマンドは、選んだ候補、設定元、除外した候補、実行引数を出力します。LLMは呼びません。使うのは `PATH` で最初に見つかる `codex` / `claude` なので、複数の版が入っている環境（バージョン管理ツールのshimとHomebrew版など）では `--codex-bin` / `--claude-bin` で候補のモデルを実際に扱える実体を指定します。kitの既定値を変えたら `python3 scripts/sync-model-resolver.py` で単体配布用Skillのコピーを同期します。担当設定を変更する場合は、git管理外の `agent-settings.local.env` へ書かず、git管理下の設定へ記録してください。
 
 ### エージェントのgitコマンドガード（Claude Code / Codex）
 

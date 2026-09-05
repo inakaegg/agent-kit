@@ -217,7 +217,7 @@ Configure each role's CLI, model, effort and fallback order in [agent-settings.e
 python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/project
 ```
 
-This prints the selected candidate, settings source, skipped candidates and an argument array; it does not call an LLM. After changing the kit defaults, run `python3 scripts/sync-model-resolver.py` to refresh standalone Skill copies. Tracked role settings must not be overridden through `agent-settings.local.env`.
+This prints the selected candidate, settings source, skipped candidates and an argument array; it does not call an LLM. It uses the first `codex` / `claude` found on `PATH`; when several versions are installed (a version manager shim next to a Homebrew install, say), pass `--codex-bin` / `--claude-bin` so the candidate's model is actually available to that binary. After changing the kit defaults, run `python3 scripts/sync-model-resolver.py` to refresh standalone Skill copies. Tracked role settings must not be overridden through `agent-settings.local.env`.
 
 
 ### Agent git guard (Claude Code / Codex)
