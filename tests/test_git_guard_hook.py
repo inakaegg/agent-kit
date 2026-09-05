@@ -1,5 +1,7 @@
 import json
+import os
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -7,8 +9,19 @@ KIT_ROOT = Path(__file__).resolve().parents[1]
 HOOK = KIT_ROOT / "scripts" / "git-guard-hook.py"
 
 
-def run_hook(tool_name: str, command: str) -> int:
-    payload = json.dumps({"tool_name": tool_name, "tool_input": {"command": command}})
+# 試験用 repository を作る git は、親の GIT_DIR 等を継がない（suite の隔離試験がそれを見張る）
+GIT_ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
+def git(*args: str) -> None:
+    subprocess.run(["git", *args], check=True, env=GIT_ENV, capture_output=True)
+
+
+def run_hook(tool_name: str, command: str, cwd: str | None = None) -> int:
+    body = {"tool_name": tool_name, "tool_input": {"command": command}}
+    if cwd is not None:
+        body["cwd"] = cwd
+    payload = json.dumps(body)
     result = subprocess.run(
         ["python3", str(HOOK)], input=payload, capture_output=True, text=True,
     )
@@ -69,9 +82,39 @@ class GitGuardHookTests(unittest.TestCase):
     def test_gh_api_visibility_is_blocked(self):
         self.assertEqual(run_hook("Bash", "gh api -X PATCH repos/me/x -f visibility=public"), 2)
 
-    def test_git_push_set_upstream_is_blocked(self):
-        self.assertEqual(run_hook("Bash", "git push -u origin main"), 2)
-        self.assertEqual(run_hook("Bash", "git push --set-upstream origin feat/x"), 2)
+    def test_git_push_set_upstream_is_blocked_without_a_remote(self):
+        with tempfile.TemporaryDirectory() as d:
+            git("init", "-q", d)
+            self.assertEqual(run_hook("Bash", "git push -u origin main", cwd=d), 2)
+            self.assertEqual(run_hook("Bash", "git push --set-upstream origin feat/x", cwd=d), 2)
+        # cwd が repository でない・無いときも厳しい側（遮断）に倒す
+        self.assertEqual(run_hook("Bash", "git push -u origin main", cwd="/nonexistent/dir"), 2)
+
+    def test_git_push_set_upstream_passes_when_a_remote_exists(self):
+        with tempfile.TemporaryDirectory() as d:
+            git("init", "-q", d)
+            git("-C", d, "remote", "add", "origin", "https://example.invalid/x.git")
+            self.assertEqual(run_hook("Bash", "git push -u origin feat/x", cwd=d), 0)
+
+    def test_gh_repo_new_and_fork_are_blocked(self):
+        self.assertEqual(run_hook("Bash", "gh repo new project --public"), 2)
+        self.assertEqual(run_hook("Bash", "gh repo fork owner/project --clone=false"), 2)
+
+    def test_continuation_lines_are_normalized(self):
+        self.assertEqual(run_hook("Bash", "gh repo edit me/x \\\n  --visibility public"), 2)
+        self.assertEqual(run_hook("Bash", "gh api -X PATCH repos/me/x \\\n  -f visibility=public"), 2)
+
+    def test_gh_api_read_only_passes(self):
+        self.assertEqual(run_hook("Bash", "gh api repos/acme/widget --jq .visibility"), 0)
+        self.assertEqual(run_hook("Bash", "gh api repos/acme/private-tools"), 0)
+
+    def test_gh_api_write_of_visibility_is_blocked(self):
+        self.assertEqual(run_hook("Bash", "gh api -X PATCH repos/me/x -f private=false"), 2)
+        self.assertEqual(run_hook("Bash", "gh api --method PATCH repos/me/x --field visibility=public"), 2)
+
+    def test_user_directed_prefix_covers_only_one_operation(self):
+        self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 gh repo create A --private && gh repo edit B --visibility public"), 2)
+        self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 cd /tmp/a && gh repo create me/a --private --source . --push"), 0)
 
     def test_git_remote_add_is_blocked(self):
         self.assertEqual(run_hook("Bash", "git remote add origin git@github.com:me/x.git"), 2)
@@ -86,7 +129,9 @@ class GitGuardHookTests(unittest.TestCase):
 
     def test_user_directed_prefix_allows_remote_create(self):
         self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 gh repo create me/x --private --source . --push"), 0)
-        self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git push -u origin main"), 0)
+        with tempfile.TemporaryDirectory() as d:
+            git("init", "-q", d)
+            self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git push -u origin main", cwd=d), 0)
 
     def test_user_directed_prefix_does_not_unlock_other_rules(self):
         self.assertEqual(run_hook("Bash", "AGENT_USER_DIRECTED=1 git add --all"), 2)
