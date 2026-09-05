@@ -75,5 +75,93 @@ class PerlAndPythonAgreeTest(unittest.TestCase):
                 self.assertEqual(py, pl, f"fixture {i}: python={py} perl={pl}")
 
 
+class EditedMarkdownPathsTest(unittest.TestCase):
+    """CLIごとに違うhook入力から、lint対象の .md を同じ形で取り出せること。"""
+
+    def test_claude_file_path_is_used_as_is(self):
+        hook = load_hook()
+        payload = {"tool_name": "Edit", "cwd": "/repo", "tool_input": {"file_path": "/repo/docs/a.md"}}
+        self.assertEqual(hook.edited_markdown_paths(payload), [Path("/repo/docs/a.md")])
+
+    def test_claude_non_markdown_is_ignored(self):
+        hook = load_hook()
+        payload = {"tool_name": "Write", "tool_input": {"file_path": "/repo/src/app.py"}}
+        self.assertEqual(hook.edited_markdown_paths(payload), [])
+
+    def test_codex_apply_patch_add_and_update(self):
+        hook = load_hook()
+        patch = (
+            "*** Begin Patch\n"
+            "*** Add File: docs/new.md\n+# 新規\n"
+            "*** Update File: README.ja.md\n@@\n-旧\n+新\n"
+            "*** Update File: src/app.py\n@@\n-a\n+b\n"
+            "*** Delete File: docs/old.md\n"
+            "*** End Patch\n"
+        )
+        payload = {"tool_name": "apply_patch", "cwd": "/repo", "tool_input": {"command": patch}}
+        self.assertEqual(
+            hook.edited_markdown_paths(payload),
+            [Path("/repo/docs/new.md"), Path("/repo/README.ja.md")],
+        )
+
+    def test_codex_apply_patch_move_uses_destination(self):
+        hook = load_hook()
+        patch = (
+            "*** Begin Patch\n"
+            "*** Update File: docs/draft.md\n*** Move to: docs/final.md\n@@\n-x\n+y\n"
+            "*** End Patch\n"
+        )
+        payload = {"tool_name": "apply_patch", "cwd": "/repo", "tool_input": {"command": patch}}
+        self.assertEqual(hook.edited_markdown_paths(payload), [Path("/repo/docs/final.md")])
+
+    def test_codex_absolute_path_is_kept(self):
+        hook = load_hook()
+        patch = "*** Begin Patch\n*** Update File: /elsewhere/x.md\n@@\n-a\n+b\n*** End Patch\n"
+        payload = {"tool_name": "apply_patch", "cwd": "/repo", "tool_input": {"command": patch}}
+        self.assertEqual(hook.edited_markdown_paths(payload), [Path("/elsewhere/x.md")])
+
+    def test_bash_tool_with_patch_like_text_is_ignored(self):
+        hook = load_hook()
+        payload = {"tool_name": "Bash", "cwd": "/repo", "tool_input": {"command": "*** Update File: a.md"}}
+        self.assertEqual(hook.edited_markdown_paths(payload), [])
+
+
+class MainExitCodeTest(unittest.TestCase):
+    """本体をCLIとして流したときの終了コード（textlint未導入でも成立する経路）。"""
+
+    def run_hook(self, payload) -> int:
+        import json
+        import subprocess
+        result = subprocess.run(
+            ["python3", str(KIT_ROOT / "scripts" / "textlint-hook.py")],
+            input=json.dumps(payload), capture_output=True, text=True,
+        )
+        return result.returncode
+
+    def test_missing_file_and_non_dict_payload_pass(self):
+        self.assertEqual(self.run_hook({"tool_name": "apply_patch", "cwd": "/nonexistent",
+                                        "tool_input": {"command": "*** Add File: a.md\n+x\n"}}), 0)
+        self.assertEqual(self.run_hook(["not", "a", "dict"]), 0)
+
+
+class StdinIntegrationTest(unittest.TestCase):
+    def test_real_stdin_calls_linter_for_every_codex_target(self):
+        import json, os, subprocess, sys
+        with tempfile.TemporaryDirectory(prefix="hook-fixture-", dir=KIT_ROOT) as d:
+            root = Path(d)
+            for name in ("first.md", "moved.md"):
+                (root / name).write_text("日本語の文書です。")
+            binary = root / "textlint"
+            log = root / "calls.jsonl"
+            binary.write_text("#!" + sys.executable + "\nimport json,sys\nfrom pathlib import Path\nwith Path(__file__).with_name('calls.jsonl').open('a') as f:f.write(json.dumps(sys.argv[1:])+'\\n')\nprint('fixture finding')\nsys.exit(1)\n")
+            binary.chmod(0o755)
+            patch = "*** Begin Patch\n*** Add File: first.md\n+本文\n*** Update File: old.md\n*** Move to: moved.md\n@@\n-旧\n+新\n*** End Patch\n"
+            payload = dict(hook_event_name="PostToolUse", tool_name="apply_patch", cwd=str(root), tool_input=dict(command=patch))
+            result = subprocess.run([sys.executable, str(KIT_ROOT / "scripts/textlint-hook.py")],
+                input=json.dumps(payload), env={**os.environ, "PATH": str(root)+os.pathsep+os.environ["PATH"]}, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertEqual({Path(json.loads(line)[-1]).name for line in log.read_text().splitlines()}, {"first.md", "moved.md"})
+
+
 if __name__ == "__main__":
     unittest.main()

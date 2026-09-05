@@ -76,8 +76,8 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 ├── scripts/
 │   ├── agent-check.example.sh
 │   ├── agent-check.sh       # kit自身の検査（validate-kit＋tests）。pre-pushとCIが実行
-│   ├── git-guard-hook.py    # Claude Code用: --no-verifyとgit add .をエージェントのコマンドから遮断
-│   ├── textlint-hook.py     # Claude Code用: .md編集直後の即時lint
+│   ├── git-guard-hook.py    # Claude Code / Codex のhook: --no-verifyとgit add .をエージェントのコマンドから遮断
+│   ├── textlint-hook.py     # Claude Code / Codex のhook: .md編集直後の即時lint
 │   └── validate-kit.py
 └── tests/
     ├── test_commit_guards.py
@@ -278,7 +278,7 @@ hookが何もしない状況が1つだけあります。システムの一時デ
 kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-settings.env` →
 同 `agent-settings.local.env`（git管理外。各repoの `.gitignore` へ追加し、個人・一時の
 切り替えに使う）の順です。ただし担当モデルのキー（`REVIEW_MODEL_*`・`REVIEW_REQUIRE_OTHER_LINEAGE`・
-`WRITING_MODEL_DEEP` の5キー）の緩和は、痕跡が残るようgit管理下のenv側で行います。書式は `KEY=value` の行だけで、shellとしてsourceせず行から値を
+`WRITING_MODEL_DEEP` の5キー）は、localで異なる値を指定すると停止します。変更はgit管理下のenv側で行います。書式は `KEY=value` の行だけで、shellとしてsourceせず行から値を
 読み取るため、空白や括弧を含む値も書けます。キーと既定値の一覧は
 kitの `agent-settings.env`（コメント付き）にあり、トグル対象の各規則は `AGENTS.md`（Claude Code固有のものは `CLAUDE.md`）の
 該当箇所にキー名を併記しています（解決の仕組みは `AGENTS.md` §1）。権限境界と
@@ -288,11 +288,15 @@ kitの `agent-settings.env`（コメント付き）にあり、トグル対象�
 その都度の許可なしに行えます。pushとPR作成は従来どおり許可が要り、この種の例外を
 増やすときはあなたの確認が要ります（`AGENTS.md` §1）。
 
-### 編集時の即時lint（Claude Code）
+### 編集時の即時lint（Claude Code / Codex）
 
-Claude Codeでは、エージェントが `.md` を編集・作成した直後にtextlintを実行し、
-指摘をその場で修正させられます。`~/.claude/settings.json` へ次のhookを登録します。
-指摘がないときは何も出力しません。`_ai/` などエージェント専用の内部文書は対象外です。
+どちらのCLIでも、エージェントが `.md` を編集・作成した直後にtextlintを実行し、
+指摘をその場で修正させられます。scriptは1本で共用です。Claude Codeは編集したpathを
+`tool_input.file_path` で渡し、Codexは `apply_patch` の本文を `tool_input.command` で
+渡すので、scriptがどちらからも対象の `.md` を読み取ります。指摘がないときは何も
+出力しません。`_ai/` などエージェント専用の内部文書は対象外です。
+
+Claude Codeでは `~/.claude/settings.json` へ登録します。
 
 ```json
 {
@@ -312,22 +316,63 @@ Claude Codeでは、エージェントが `.md` を編集・作成した直後�
 }
 ```
 
+Codexでは同じ形を `~/.codex/hooks.json`（またはリポジトリの `.codex/hooks.json`）へ
+書きます。ファイル編集のツール名が `apply_patch` なので、matcherはそれにします。
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /absolute/path/to/agent-kit/scripts/textlint-hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Codexは、hookの定義を利用者が確認して信頼登録するまで実行しません（Codexチャットの
+`/hooks`。信頼はhookのhash単位で記録され、定義を書き換えると再登録まで飛ばされます）。
+書式は[Codexのhooks文書](https://learn.chatgpt.com/docs/hooks)に基づきます。
+Codex CLI 0.153.4で、Bashの実行前ガードとapply_patch後のlintが呼ばれ、
+どちらも指摘時にexit 2を返すことを確認しています。
+
 この登録は、textlintの導入（前節の `npm install`）と同じく、利用者が各自で行う
 手作業です。自動で実行されるコマンドの登録は、人間が自分の設定へ書くべきもの
 なので、エージェントに代行させません（Claude Code側も、エージェントによる
 この設定の書き込みを自動では承認しません）。
 
-Codexには同等のhook機構がないため、Codex側はcommit時のpre-commitと
-`$docs-maintenance` の手順でカバーします。
+### モデルとフォールバックの設定
 
-### エージェントのgitコマンドガード（Claude Code）
+各担当のCLI・モデル名・思考量・候補順は、[agent-settings.env](agent-settings.env)に `CLI:MODEL(EFFORT)` の形で設定します。作業repoの設定が既定値より優先され、CLIの既定モデルには任せません。
+
+書いた並びは同じCLI内での優先順で、どちらのCLIを先にするかは呼び出し元で決まります。resolverは各CLIが子プロセスへ渡す環境変数（Claude Codeは `CLAUDECODE`、Codexは `CODEX_THREAD_ID`。`--primary-cli` で明示できます）から自分が動いているCLIを判定し、そのCLIの候補を先に試します。そのため、Claude Codeで始めた作業はClaudeの、Codexで始めた作業はCodexの利用枠に寄ります。どちらの環境変数も無いとき、または両方あるとき（一方のCLIの中からもう一方を起動した場合）は、設定の並びをそのまま使います。例外は `REVIEW_REQUIRE_OTHER_LINEAGE=true` の重リスクレビューで、`--implementer-cli` で渡した実装担当と別の系統（CodexかClaudeかのもう一方）を、呼び出し元によらず先にします。
+
+CLI未導入や、認証不能・モデル利用不可・利用上限が確認された場合は、その並べ替え後の次候補へ切り替えます。通常の検査失敗やレビュー指摘では切り替えません。担当の独立性と詳しい条件は[レビュー規則](docs/policies/review.md)を参照してください。
+
+```sh
+python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_HEAVY --repo /path/to/project
+```
+
+このコマンドは、選んだ候補、設定元、除外した候補、実行引数を出力します。LLMは呼びません。使うのは `PATH` で最初に見つかる `codex` / `claude` なので、複数の版が入っている環境（バージョン管理ツールのshimとHomebrew版など）では `--codex-bin` / `--claude-bin` で候補のモデルを実際に扱える実体を指定します。kitの既定値を変えたら `python3 scripts/sync-model-resolver.py` で単体配布用Skillのコピーを同期します。担当設定を変更する場合は、git管理外の `agent-settings.local.env` へ書かず、git管理下の設定へ記録してください。
+
+### エージェントのgitコマンドガード（Claude Code / Codex）
 
 `AGENTS.md` の規則のうち2つは、git側に強制できる地点がありません。`--no-verify` の
 禁止（hookは自分自身の回避を防げない）と、`git add .` / `-A` / `--all` の禁止
 （addにはhookがない）です。`scripts/git-guard-hook.py` は、エージェントが実行しようと
-するBashコマンドを実行前に検査し、この2つの禁止形を遮断します。効くのはエージェントの
+するshellコマンドを実行前に検査し、この2つの禁止形を遮断します。効くのはエージェントの
 ツール呼び出しだけで、人間がターミナルで打つ同じコマンドには影響しません。
-`~/.claude/settings.json` へ登録します（登録が手作業である理由は前節と同じです）。
+どちらのCLIもshellのツール名を `Bash`、コマンドを `tool_input.command` で渡すので、
+登録は同じ形です。Claude Codeは `~/.claude/settings.json`、Codexは `~/.codex/hooks.json`
+へ書き、Codexでは前節の `/hooks` での信頼登録が要ります（登録が手作業である理由は
+前節と同じです）。
 
 ```json
 {
@@ -346,9 +391,6 @@ Codexには同等のhook機構がないため、Codex側はcommit時のpre-commi
   }
 }
 ```
-
-Codexには実行前hookの機構がないため、Codex側のこの2規則は文書（`AGENTS.md`
-§5・§8）のままです。
 
 ### 個人環境ポリシー
 

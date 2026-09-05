@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Claude CodeのPreToolUse hook: エージェントのgitコマンドの禁止形を遮断する。
+"""Claude Code / Codex の PreToolUse hook: エージェントのgitコマンドの禁止形を遮断する。
 
 共通AGENTS.mdのうち、git側にhook地点がなく機械強制できない2つを実装する:
   - §5: --no-verify での検査回避の禁止
   - §8: git add . / -A / --all の丸ごとstageの禁止（fileを個別指定する）
 
-stdinでhook入力(JSON)を受け、Bashのcommand文字列を検査する。
+stdinでhook入力(JSON)を受け、Bashのcommand文字列を検査する。両CLIとも
+tool_name は "Bash"、コマンドは tool_input.command に入る（他の項目は見ない）。
 違反時はexit 2（ブロック。stderrがエージェントへ渡る）、それ以外はexit 0。
 人間のターミナル操作には一切効かない（エージェントのツール呼び出し専用）。
 登録方法はagent-kit READMEのGit hooks節を参照。
