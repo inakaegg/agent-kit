@@ -61,7 +61,7 @@ action：keep / update / merge / split / redirect / delete / internalize。
 - stale future/past wording
 - 日本語の人間向け文書：textlintの指摘を解消する（編集時hook・pre-commitが自動で指摘する環境では、その指摘に従う）
 - 公開・提出する人間向け文書：同梱の `python3 scripts/resolve-agent-model.py --key REVIEW_MODEL_READABILITY --repo <作業repoのroot>` で担当を解決する。候補・思考量は設定ファイルを正本とし、本文へ固定しない。resolverは自分が動いているCLIの候補を先に試す（`--primary-cli` で明示可）。CLI未導入は自動で次候補へ進む。認証不能・モデル利用不可・利用上限を明確に観測した候補は、証跡付きの `--unavailable '<candidate>=<reason>'` で除外して再解決する（reasonは `authentication`、`model-unavailable`、`rate-limit`）。各候補1回に限り、一般的な検査失敗やレビュー指摘では切り替えない。設定外や追加課金の経路へ移らず、全候補が使えない場合は停止する。選択・切り替えの結果と理由を報告する。full kitの設定がない単体配布では `references/model-defaults.env` を既定にする。reviewerの `argv` は配列のまま使い、編集toolsを許可しない。
-- `DOCS_LEVEL=minimal`（agent-settings）のrepoでは、人間向け文書は骨組みか要点までとし、読みやすさレビューをしない（外部へ提出する文書は例外で、下の2項目に従う）。公開前に `full` へ戻して整える順序は `docs/policies/git-and-remote.md` に従う
+- `DOCS_LEVEL=minimal`（agent-settings）のrepoでは、人間向け文書は骨組みか要点までとし、読みやすさレビューをしない（外部へ提出する文書は例外で、下の2項目に従う）。公開または共有を始める前には、追跡対象の `agent-settings.env` に `DOCS_LEVEL=full` を置き、骨組みだけだった文書を完成文書へ整えてから、下の2項目のレビューを通す
 - 公開・提出する人間向け文書：`assets/DOCS_REVIEW_PROMPT.md` による、履歴を共有しない別セッションの読みやすさレビュー（reviewerの資格条件は同ファイル冒頭の指定に従う。2回既定、`VERDICT: LGTM` まで）。2回目で新たに目的不達の修正必須が出た場合は、解消確認を1回追加できる。
 
 新しく考えた仕様を、その同じcontextで過度に厳密なdocument testへ固定しない。fresh review後に、stableな意味だけをlint/CIで検査する。
