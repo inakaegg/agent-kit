@@ -278,7 +278,7 @@ hookが何もしない状況が1つだけあります。システムの一時デ
 kitの `agent-settings.env`（既定値）→ 作業repo直下の `agent-settings.env` →
 同 `agent-settings.local.env`（git管理外。各repoの `.gitignore` へ追加し、個人・一時の
 切り替えに使う）の順です。ただし担当モデルのキー（`REVIEW_MODEL_*`・`REVIEW_REQUIRE_OTHER_LINEAGE`・
-`WRITING_MODEL_DEEP` の5キー）は、localで異なる値を指定すると停止します。変更はgit管理下のenv側で行います。書式は `KEY=value` の行だけで、shellとしてsourceせず行から値を
+`WRITING_MODEL_DEEP` の5キー）と `DOCS_LEVEL` は、localで異なる値を指定すると停止します。変更はgit管理下のenv側で行います。書式は `KEY=value` の行だけで、shellとしてsourceせず行から値を
 読み取るため、空白や括弧を含む値も書けます。キーと既定値の一覧は
 kitの `agent-settings.env`（コメント付き）にあり、トグル対象の各規則は `AGENTS.md`（Claude Code固有のものは `CLAUDE.md`）の
 該当箇所にキー名を併記しています（解決の仕組みは `AGENTS.md` §1）。権限境界と
