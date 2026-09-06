@@ -47,4 +47,4 @@
 
 ## 文書更新のレビュー
 
-人間向け文書の新規作成と本文の実質的な更新は、`READABILITY_REVIEW=true` のとき、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする。誤字修正・リンク修正等の軽微変更は対象外。公開前の読みやすさレビューはこれとは別の公開前の関門で、`docs/policies/git-and-remote.md` に従う。`DOCS_LEVEL=minimal`（既定値。非公開・非共有repo向け）のrepoでは、文章の詳細化を免除し、人間向け文書は骨組みか要点の箇条書きまでに留め、読みやすさレビューを課さない。公開・共有repoは追跡対象の agent-settings.env で `full` にする。本kit自身は公開のため `full` 扱いとする。本来必要な構成図・経路図は免除しない。公開する時点で、追跡対象の設定を `full` に戻し、骨組みを完成文書へ整え、読みやすさレビューを通してから公開する（`docs/policies/git-and-remote.md`）。レビューの回数・指摘の扱いは本kitの `docs/policies/review.md` に従う。
+人間向け文書の新規作成と本文の実質的な更新は、`READABILITY_REVIEW=true` のとき、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする。誤字修正・リンク修正等の軽微変更は対象外。公開前の読みやすさレビューはこれとは別の公開前の関門で、`docs/policies/git-and-remote.md` に従う。`DOCS_LEVEL=minimal`（既定値。非公開・非共有repo向け）のrepoでは、文章の詳細化を免除し、人間向け文書は骨組みか要点の箇条書きまでに留め、読みやすさレビューを課さない。公開・共有repoは追跡対象の agent-settings.env で `full` にする。既に公開・共有しているrepoで値が未設定なら、既定値によらず `full` として扱い、気づいた時点で明記する。本kit自身は公開のため `full` 扱いとする。本来必要な構成図・経路図は免除しない。公開する時点で、追跡対象の設定を `full` に戻し、骨組みを完成文書へ整え、読みやすさレビューを通してから公開する（`docs/policies/git-and-remote.md`）。レビューの回数・指摘の扱いは本kitの `docs/policies/review.md` に従う。
