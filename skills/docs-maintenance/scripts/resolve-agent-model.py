@@ -16,7 +16,8 @@ MODEL_KEYS = (
     "REVIEW_MODEL_HEAVY", "REVIEW_MODEL_DEFAULT", "REVIEW_MODEL_READABILITY",
     "WRITING_MODEL_DEEP",
 )
-PROTECTED_KEYS = (*MODEL_KEYS, "REVIEW_REQUIRE_OTHER_LINEAGE")
+# DOCS_LEVEL is protected too: a local "minimal" must not silently skip the docs work of a shared repo.
+PROTECTED_KEYS = (*MODEL_KEYS, "REVIEW_REQUIRE_OTHER_LINEAGE", "DOCS_LEVEL")
 EFFORTS = {
     "codex": {"none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"},
     "claude": {"low", "medium", "high", "xhigh", "max"},

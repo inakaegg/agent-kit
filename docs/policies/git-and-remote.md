@@ -78,5 +78,5 @@ project方針がない場合：
 - 初回pushでresourceが自動作成されるregistryでは、存在、namespace、default privacyを事前確認する。
 - source、container image、release artifact、package、deploy先は別々にvisibilityを確認する。
 - 作成、visibility変更、初回push後は、実際の公開範囲をAPIまたは管理画面で再確認し、報告する。
-- public化または初回のpublic pushの前に、次の2つを済ませて記録を残す（現在taskの `reviews/` 等）。人間向け文書（README等）の読みやすさレビュー（`$docs-maintenance`）で `VERDICT: LGTM` を得ること。READMEの手順のうち、ローカルで完結し副作用のない部分（インストール、起動、dry-run）を書いたとおりに実行して確かめること。
+- public化、初回のpublic push、または非公開のまま他者（collaborator・team）へ共有を始める前に、`DOCS_LEVEL=full` へ移行する。`minimal`（既定値）のrepoでは追跡対象の `agent-settings.env` に `DOCS_LEVEL=full` を置き、骨組みだけだった人間向け文書を完成文書へ整える。そのうえで次の2つを済ませて記録を残す（現在taskの `reviews/` 等）。人間向け文書（README等）の読みやすさレビュー（`$docs-maintenance`）で `VERDICT: LGTM` を得ること。READMEの手順のうち、ローカルで完結し副作用のない部分（インストール、起動、dry-run）を書いたとおりに実行して確かめること。
 - デプロイ、課金、公開を伴う手順は実行して確かめない。dry-runやplanがあればそれで代え、無ければ「未実行」と完了報告に明記する。

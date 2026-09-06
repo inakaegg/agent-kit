@@ -106,6 +106,17 @@ class ModelResolverTest(unittest.TestCase):
         local.write_text(f"{KEY}={FIRST} {SECOND}\n")
         self.assertEqual(self.run_cli()[0], 0)
 
+    def test_untracked_docs_level_override_is_rejected(self):
+        self.executable("codex")
+        (self.repo / "agent-settings.env").write_text("DOCS_LEVEL=full\n")
+        local = self.repo / "agent-settings.local.env"
+        local.write_text("DOCS_LEVEL=minimal\n")
+        code, result = self.run_cli()
+        self.assertEqual(code, 2)
+        self.assertIn("DOCS_LEVEL", result["error"])
+        local.write_text("DOCS_LEVEL=full\n")
+        self.assertEqual(self.run_cli()[0], 0)
+
     def test_other_lineage_is_enforced_when_enabled(self):
         self.executable("codex")
         self.executable("claude")

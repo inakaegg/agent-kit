@@ -9,7 +9,7 @@
 - 変更対象へ適用される、ルートから対象ディレクトリまでの `AGENTS.md`、`CLAUDE.md`、その他の明示的な指示を読む。
 - 本文中の `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は、agent-kit（本ファイルの実体がある場所）内を指す。symlink経由で読んでいる場合は実体の場所を辿る。作業対象プロジェクトの `docs/` とは別物である。
 - 上位の指示を下位の指示が暗黙に弱めてはならない。矛盾があり、結果が実質的に変わる場合は推測で選ばず停止して報告する。
-- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。例外として担当関連5キー（`REVIEW_MODEL_*`、`REVIEW_REQUIRE_OTHER_LINEAGE`、`WRITING_MODEL_DEEP`）は、localの値が追跡対象の設定と異なれば停止する。これらの値はgit管理下の `agent-settings.env` で変更する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
+- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。例外として担当関連5キー（`REVIEW_MODEL_*`、`REVIEW_REQUIRE_OTHER_LINEAGE`、`WRITING_MODEL_DEEP`）と `DOCS_LEVEL` は、localの値が追跡対象の設定と異なれば停止する。これらの値はgit管理下の `agent-settings.env` で変更する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
 - 本ファイルへ、現在のタスクの仕様、試行履歴、技術スタック固有の細則、長い操作手順を追加しない。
 
 ## 2. 情報の正本
@@ -66,7 +66,7 @@
 - 機能は可能な限りCLIを先に実装し、UI・API層を後からその上へ重ねる（MUST。`CLI_FIRST=false` のrepoでは適用しない）。対象の判定基準と `docs/CLI.md` の書式は `docs/policies/quality-details.md` に従う。
 - UI変更は、対象の実画面を重要なsize・state・themeで直接確認する。実行経路の探し方と確認手順は `docs/policies/quality-details.md` と `$ui-verification` に従う。確認方式は `UI_BROWSER_VERIFICATION` で選ぶ。`full`（既定）はブラウザ自動検証まで必須、`screenshots` は主要画面のスクショをタスクdirectoryへ撮りためてユーザー目視へ委ね、`off` は実画面確認を免除して報告に未検証と明記する。
 - 外部サービスのfixtureは公式情報と匿名化した実観測を優先し、出典を記録する。通常のリグレッションテストはnetworkやAPI keyなしで実行できるようにする。詳細は `docs/policies/quality-details.md`。
-- 新しい非自明な機構を設計して定着したら、ユーザー向けの平易な解説文書と図を別途作る。書き方と図の規則は `docs/policies/quality-details.md` に従う。
+- 新しい非自明な機構を設計して定着したら、ユーザー向けの平易な解説文書と図を別途作る。書き方と図の規則は `docs/policies/quality-details.md` に従う。`DOCS_LEVEL=minimal` のrepoでは文章の詳細化を免除し、解説文書は骨組みか要点の箇条書きまででよい。ただし本来必要な構成図・経路図は免除しない。
 - 実装状況・進み具合を書く場所は `docs/ROADMAP.md`（またはプロジェクトが定めた1箇所）に限る。各文書の冒頭に更新日を置かず、状態の注記を複数文書へ撒かない。
 - 性能改善を主張する場合は、同じ条件のBefore/After、環境、測定方法を残す。測定不能なら、まず測定経路を追加する。
 - 既存commentは設計意図の手掛かりとして扱い、誤りでない限り無断削除しない。新しいcommentはcodeが既に示すWHATではなく、非自明なWHY・制約・不変条件を簡潔に説明する。
@@ -86,7 +86,7 @@
 - レビューの段階は**仕様レビュー → 実装計画レビュー → 実装レビュー**とする（過去の文書・Skillにある gate 1/2/3 と「計画レビュー」の表記もこの3つを指す）。重リスク作業は3段階すべてを順に通す。通常対象作業は仕様と実装計画を1つのレビューにまとめて通し（gate 1+2）、実装後に実装レビューを通す（`INDEPENDENT_REVIEW=false` のときは通常対象作業と小さな変更のレビューを免除する。重リスク作業の3段階は免除しない）。各段階で `VERDICT: LGTM` を得るまで次へ進まない。各段階のレビューは2巡までとし、残った指摘は正しさ・security・データ消失・互換性に関わるものだけ対応し、他は課題として記録して通過する。
 - レビュー担当は、その成果物を作っていない、履歴を共有しない別セッションを必須とする。別のtool/modelを使うことは重リスク作業でだけ必須とし（次項）、それ以外は呼び出し元のCLIの候補を既定とする（利用枠を呼び出し元の側へ寄せるため。順序の規則は `docs/policies/review.md`）。どのモデルを担当にするかは設定キーで決める（重リスク作業は `REVIEW_MODEL_HEAVY`、通常対象作業は `REVIEW_MODEL_DEFAULT`。書式と選び方は `docs/policies/review.md`）。**`REVIEW_REQUIRE_OTHER_LINEAGE=true` のあいだ、重リスク作業のレビュー担当は、別系統のモデルが使える限り実装担当と別系統を必須とする**。
 - 別系統が利用上限等で使えないときは、通常対象作業は同系統で進めてよい。重リスク作業は同系統で暫定通過として先へ進み、別系統が使えるようになった時点でその段階をやり直す（暫定通過の事実とやり直しの残件を契約へ記録する）。**これらのモデルキーの値を変えてよいのは、ユーザーの明示指示があるときだけとする（エージェントが自分の判断で緩めない）。** 緩めた場合は、変えたキー・値・理由をタスクの契約へ書き、標準の担当が使えるようになった時点で該当レビューをやり直す。
-- 人間向け文書の新規作成と本文の実質更新は、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする（`READABILITY_REVIEW=false` なら不要）。誤字修正等の軽微変更は対象外。
+- 人間向け文書の新規作成と本文の実質更新は、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする（`READABILITY_REVIEW=false` または `DOCS_LEVEL=minimal` なら不要）。公開する文書と外部へ提出する文書は `DOCS_LEVEL` によらず対象とする。誤字修正等の軽微変更は対象外。
 - 指摘は**修正 / 記録のみ / 誤検知として反証**へ仕分け、裏付けのない指摘を修正必須として扱わない。指摘の件数上限、レビューの回数、修正必須が残った場合の扱いは `docs/policies/review.md` に従う。
 - review-readyのPRを作成したら、その場で `$pr-review-loop` に入り、最新headに対するbot review・CI・required checksを収束条件まで回す（botが利用上限等で止まっている場合の扱いも同Skillに従う。Draftでは状態の確認と記録に留める）。動作に影響しない変更のPRは、CIとprojectが要求するreview signalの確認だけでよく、独立レビューは要求しない。指摘への修正は§3の許可範囲で行い、そのターンに修正の許可がなければ指摘を報告して止める。mergeは§3のとおり明示許可を必要とする（`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、必要なレビューがすべてLGTMなら許可不要）。
 
