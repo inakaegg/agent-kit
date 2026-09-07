@@ -150,7 +150,7 @@ def git_effective_dir(words: list[str], current: str | None) -> tuple[str | None
             name, _, value = w.partition("=")
             directory = repo_dir_from_git_dir(directory, value, name)
             i += 1
-        elif w in ("-c", "--namespace", "--exec-path") and i + 1 < len(words):
+        elif w in ("-c", "--namespace", "--exec-path", "--config-env", "--attr-source") and i + 1 < len(words):
             i += 2
         elif w.startswith("-"):
             i += 1

@@ -50,7 +50,9 @@ class GitGuardHookTests(unittest.TestCase):
             'git -ccore.quotePath=false', 'git --git-dir .git',
             'git --git-dir=.git', 'git --work-tree .', 'git --work-tree=.',
             'git --namespace test', 'git --namespace=test',
-            'git --config-env=core.quotePath=QUOTE_PATH', 'git --no-pager',
+            'git --config-env=core.quotePath=QUOTE_PATH',
+            'git --config-env core.quotePath=QUOTE_PATH',
+            'git --attr-source HEAD', 'git --attr-source=HEAD', 'git --no-pager',
             'git -C . -C . -c core.quotePath=false --work-tree=.',
         )
         for prefix in prefixes:
@@ -60,6 +62,13 @@ class GitGuardHookTests(unittest.TestCase):
                     self.assertEqual(run_hook('Bash', 'AGENT_USER_DIRECTED=1 ' + prefix + ' add ' + target), 2)
             with self.subTest(prefix=prefix, target='named'):
                 self.assertEqual(run_hook('Bash', prefix + ' add src/app.py .gitignore'), 0)
+
+    def test_push_guard_with_value_taking_global_options(self):
+        for prefix in ('git --config-env core.quotePath=QUOTE_PATH',
+                       'git --config-env=core.quotePath=QUOTE_PATH',
+                       'git --attr-source HEAD', 'git --attr-source=HEAD'):
+            with self.subTest(prefix=prefix):
+                self.assertEqual(run_hook('Bash', prefix + ' push https://example.invalid/x.git main'), 2)
 
     def test_git_add_named_files_pass(self):
         self.assertEqual(run_hook("Bash", "git add src/app.py docs/README.md"), 0)
