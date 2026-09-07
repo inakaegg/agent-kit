@@ -70,6 +70,15 @@ class GitGuardHookTests(unittest.TestCase):
             with self.subTest(prefix=prefix):
                 self.assertEqual(run_hook('Bash', prefix + ' push https://example.invalid/x.git main'), 2)
 
+    def test_add_option_named_files_after_separator(self):
+        for prefix in ('git', 'git -C .', 'git -c core.quotePath=false'):
+            for name in ('-A', '--all'):
+                with self.subTest(prefix=prefix, name=name):
+                    self.assertEqual(run_hook('Bash', prefix + ' add -- ' + name), 0)
+            for args in ('-A -- named', '--all -- named', '-- .', '-- ./'):
+                with self.subTest(prefix=prefix, args=args):
+                    self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 2)
+
     def test_git_add_named_files_pass(self):
         self.assertEqual(run_hook("Bash", "git add src/app.py docs/README.md"), 0)
 

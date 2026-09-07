@@ -36,10 +36,6 @@ RULES = [
         "git の --no-verify は使用禁止（共通AGENTS.md §5）。"
         "hookの指摘を修正してから再実行する。",
     ),
-    (
-        re.compile(r"\bgit\s+add\s+(?:[^|;&\n]*\s)?(?:\.|\./|-A|--all)(?:\s|$|[|;&])"),
-        BULK_STAGE_MESSAGE,
-    ),
 ]
 
 # --- §3 remote repositoryの作成・初回push・public化 ------------------------------------
@@ -269,8 +265,12 @@ def check_git(words: list[str], current: str | None) -> str | None:
     sub = rest[0]
     if sub == "add":
         # 共通オプションを除いたargvで判定し、-C / -c の有無で保護を変えない。
-        if any(w in (".", "./", "-A", "--all") for w in rest[1:]):
-            return BULK_STAGE_MESSAGE
+        options = True
+        for word in rest[1:]:
+            if options and word == "--":
+                options = False
+            elif word in (".", "./") or (options and word in ("-A", "--all")):
+                return BULK_STAGE_MESSAGE
         return None
     if sub == "remote":
         k = 1
