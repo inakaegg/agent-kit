@@ -27,6 +27,9 @@ import sys
 # ユーザーの直接指示があるときだけ、remote作成系の遮断を外す印。コマンドの先頭に置く。
 USER_DIRECTED = re.compile(r"^\s*AGENT_USER_DIRECTED=1\s")
 
+BULK_STAGE_MESSAGE = ("git add . / -A / --all は使用禁止（共通AGENTS.md §8）。"
+                      "stageするfileを個別に指定する。")
+
 RULES = [
     (
         re.compile(r"\bgit\b[^|;&\n]*\s--no-verify\b"),
@@ -35,8 +38,7 @@ RULES = [
     ),
     (
         re.compile(r"\bgit\s+add\s+(?:[^|;&\n]*\s)?(?:\.|\./|-A|--all)(?:\s|$|[|;&])"),
-        "git add . / -A / --all は使用禁止（共通AGENTS.md §8）。"
-        "stageするfileを個別に指定する。",
+        BULK_STAGE_MESSAGE,
     ),
 ]
 
@@ -265,6 +267,11 @@ def check_git(words: list[str], current: str | None) -> str | None:
     if not rest:
         return None
     sub = rest[0]
+    if sub == "add":
+        # 共通オプションを除いたargvで判定し、-C / -c の有無で保護を変えない。
+        if any(w in (".", "./", "-A", "--all") for w in rest[1:]):
+            return BULK_STAGE_MESSAGE
+        return None
     if sub == "remote":
         k = 1
         while k < len(rest) and rest[k].startswith("-"):
@@ -423,6 +430,10 @@ def main() -> int:
     violations = remote_create_violations(command, cwd)
     if not violations:
         return 0
+    # ユーザーの直接指示の例外はremote操作だけに適用する。
+    if BULK_STAGE_MESSAGE in violations:
+        print(f"git-guard: {BULK_STAGE_MESSAGE}", file=sys.stderr)
+        return 2
     # ユーザーの直接指示は1つの操作に対するもの。印があっても、remote作成系の区間が2つ以上あれば通さない。
     if directed and len(violations) == 1:
         return 0

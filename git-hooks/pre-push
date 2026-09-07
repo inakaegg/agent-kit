@@ -78,12 +78,12 @@ run_agent_check() {
 # リポジトリ固有の .git/hooks/pre-push があれば最後に委譲する（その前に検証スクリプトを実行）。
 run_local_hook() {
   run_agent_check
-  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  git_dir="$(git rev-parse --git-common-dir 2>/dev/null)"
   local_hook="$git_dir/hooks/pre-push"
   self="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
   if [ -n "$git_dir" ] && [ -x "$local_hook" ]; then
     local_real="$(cd "$(dirname "$local_hook")" 2>/dev/null && pwd -P)/pre-push"
-    if [ "$local_real" != "$self" ]; then
+    if [ "$local_real" != "$self" ] && [ ! "$local_hook" -ef "$0" ]; then
       printf '%s\n' "$input" | "$local_hook" "$@"
       exit $?
     fi

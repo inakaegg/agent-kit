@@ -44,6 +44,23 @@ class GitGuardHookTests(unittest.TestCase):
     def test_git_add_all_is_blocked(self):
         self.assertEqual(run_hook("Bash", "git add --all"), 2)
 
+    def test_add_guard_with_global_options(self):
+        prefixes = (
+            'git -C .', 'git -C.', 'git -c core.quotePath=false',
+            'git -ccore.quotePath=false', 'git --git-dir .git',
+            'git --git-dir=.git', 'git --work-tree .', 'git --work-tree=.',
+            'git --namespace test', 'git --namespace=test',
+            'git --config-env=core.quotePath=QUOTE_PATH', 'git --no-pager',
+            'git -C . -C . -c core.quotePath=false --work-tree=.',
+        )
+        for prefix in prefixes:
+            for target in ('.', './', '-A', '--all'):
+                with self.subTest(prefix=prefix, target=target):
+                    self.assertEqual(run_hook('Bash', prefix + ' add ' + target), 2)
+                    self.assertEqual(run_hook('Bash', 'AGENT_USER_DIRECTED=1 ' + prefix + ' add ' + target), 2)
+            with self.subTest(prefix=prefix, target='named'):
+                self.assertEqual(run_hook('Bash', prefix + ' add src/app.py .gitignore'), 0)
+
     def test_git_add_named_files_pass(self):
         self.assertEqual(run_hook("Bash", "git add src/app.py docs/README.md"), 0)
 
