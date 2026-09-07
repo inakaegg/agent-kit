@@ -79,6 +79,27 @@ class GitGuardHookTests(unittest.TestCase):
                 with self.subTest(prefix=prefix, args=args):
                     self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 2)
 
+    def test_add_pathspec_file_values_are_not_options(self):
+        for prefix in ('git', 'git -C .'):
+            for name in ('-A', '--all'):
+                for args in (f'--pathspec-from-file {name}', f'--pathspec-from-file={name}'):
+                    with self.subTest(prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 0)
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args + ' -A'), 2)
+
+    def test_add_in_shell_control_syntax(self):
+        forms = ('{ %s; }', 'if %s; then :; fi', '! %s',
+                 'while %s; do break; done', 'until %s; do break; done',
+                 'for x in 1; do %s; done', 'f() { %s; }; f', '(%s)')
+        for form in forms:
+            for prefix in ('git', 'git -C .', 'git -c core.quotePath=false'):
+                for args in ('-A', '--all', '.', '-- .'):
+                    with self.subTest(form=form, prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', form % (prefix + ' add ' + args)), 2)
+                for args in ('-- -A', '-- --all', '--pathspec-from-file -A'):
+                    with self.subTest(form=form, prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', form % (prefix + ' add ' + args)), 0)
+
     def test_git_add_named_files_pass(self):
         self.assertEqual(run_hook("Bash", "git add src/app.py docs/README.md"), 0)
 

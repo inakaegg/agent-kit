@@ -266,8 +266,11 @@ def check_git(words: list[str], current: str | None) -> str | None:
     if sub == "add":
         # 共通オプションを除いたargvで判定し、-C / -c の有無で保護を変えない。
         options = True
-        for word in rest[1:]:
-            if options and word == "--":
+        args = iter(rest[1:])
+        for word in args:
+            if options and word in ("--pathspec-from-file", "--chmod"):
+                next(args, None)
+            elif options and word == "--":
                 options = False
             elif word in (".", "./") or (options and word in ("-A", "--all")):
                 return BULK_STAGE_MESSAGE
@@ -425,6 +428,13 @@ def main() -> int:
     for pattern, message in RULES:
         if pattern.search(command):
             print(f"git-guard: {message}", file=sys.stderr)
+            return 2
+    # 従来の文字列検出を残し、if / { / 関数など未解析の制御構文でもaddを見落とさない。
+    # 禁止語そのものではなく引数列を同じ判定へ渡し、--やオプションの値は区別する。
+    for match in re.finditer(r"\bgit\b[^|;&\n]*", command):
+        words = split_words(match.group().rstrip(" \t)}"))
+        if check_git(words, cwd) == BULK_STAGE_MESSAGE:
+            print(f"git-guard: {BULK_STAGE_MESSAGE}", file=sys.stderr)
             return 2
     directed = bool(USER_DIRECTED.match(command))
     violations = remote_create_violations(command, cwd)
