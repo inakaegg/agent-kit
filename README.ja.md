@@ -157,9 +157,15 @@ done
 次のコマンドは未設定のときだけ設定します。設定済みなら現在値を表示するだけで、
 何も変更しません。
 
-```bash
-git config --global core.hooksPath \
-  || git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+共有hookには、Gitを実行する環境の`PATH`上にBash 3.2以降が必要です。未導入の場合は、OSのパッケージ管理ツールでBashを導入してから設定してください。以下のコマンドは、実行中のshellでBashのバージョンを確認してからhookを設定します。Gitを利用する環境で実行してください。IDEやGUIクライアントでは`PATH`が異なる場合があるため、それぞれの実行環境でもBashを利用できることを確認してください。
+
+```sh
+if bash -c '(( BASH_VERSINFO[0] > 3 || (BASH_VERSINFO[0] == 3 && BASH_VERSINFO[1] >= 2) ))' 2>/dev/null; then
+  git config --global core.hooksPath \
+    || git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+else
+  printf '%s\n' 'Bash 3.2 or later is required; install it before enabling the hooks.' >&2
+fi
 ```
 
 `core.hooksPath` を既に自分のhookディレクトリへ向けている場合は、上書きしないでください。
