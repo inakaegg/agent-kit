@@ -100,6 +100,45 @@ class GitGuardHookTests(unittest.TestCase):
                     with self.subTest(form=form, prefix=prefix, args=args):
                         self.assertEqual(run_hook('Bash', form % (prefix + ' add ' + args)), 0)
 
+    def test_add_help_is_an_option_only_before_separator(self):
+        for prefix in ('git', 'git -C .'):
+            for help_arg in ('--help', '-h'):
+                for args in (f'-- . {help_arg}', f'-A -- {help_arg}',
+                             f'--pathspec-from-file {help_arg} -A'):
+                    with self.subTest(prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 2)
+                for args in (help_arg, '-A ' + help_arg, help_arg + ' -A', '-- ' + help_arg):
+                    with self.subTest(prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 0)
+
+    def test_add_examples_in_quoted_data_are_allowed(self):
+        for example in ('git add -A; example', 'git -C . add -A; example',
+                        'git -c core.quotePath=false add --all; example',
+                        'example; git -C . add -A; example'):
+            for command in (f"grep -q '{example}' README.md",
+                            f"printf '%s' '{example}'", f'printf "%s" "{example}"'):
+                with self.subTest(command=command):
+                    self.assertEqual(run_hook('Bash', command), 0)
+        self.assertEqual(run_hook('Bash', "printf '%s' ';' git -C . add -A"), 0)
+
+    def test_add_redirections_are_not_flags_or_commands(self):
+        for command in ('git add 2>&1 -A', 'git add -A > --help',
+                        '2>/dev/null git add -A', 'git add -A < --help',
+                        'git add --pathspec-from-file 2 >out -A'):
+            with self.subTest(command=command):
+                self.assertEqual(run_hook('Bash', command), 2)
+        self.assertEqual(run_hook('Bash', "bash <<< 'git add -A'"), 2)
+
+    def test_comments_preserve_next_command_boundary(self):
+        for command in ('git status --short # before staging\ngit add -A',
+                        'ls -la # note\ngit add .',
+                        'ls -la # note\ngh repo create me/x --public',
+                        'echo hi # note\ngit push https://example.invalid/n.git main',
+                        'git add -A # --help',
+                        'echo hi # unclosed \"quote\ngit add -A'):
+            with self.subTest(command=command):
+                self.assertEqual(run_hook('Bash', command), 2)
+
     def test_git_add_named_files_pass(self):
         self.assertEqual(run_hook("Bash", "git add src/app.py docs/README.md"), 0)
 
