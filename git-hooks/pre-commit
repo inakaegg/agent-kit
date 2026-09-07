@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # 環境依存の絶対パス（ホームディレクトリ配下、外部ボリューム配下）が
 # commit の追加行へ混入するのを防ぐグローバル pre-commit hook。
 #

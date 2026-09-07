@@ -166,3 +166,17 @@ sys.exit(1 if any('指摘' in path.read_text() for path in files) else 0)
                                         capture_output=True, text=True, timeout=5)
                 self.assertEqual(result.returncode, 1, result.stderr)
                 self.assertIn('missing.md', result.stderr)
+
+    def test_direct_execution_resolves_bash_from_path(self):
+        bash = shutil.which('bash')
+        self.assertIsNotNone(bash)
+        marker = self.root / 'bash-used'
+        self.executable(self.bin / 'bash', f'#!{sys.executable}\n'
+                        'import os, sys\n'
+                        f'open({str(marker)!r}, "w").close()\n'
+                        f'os.execv({bash!r}, [{bash!r}, *sys.argv[1:]])\n')
+        result = subprocess.run([str(KIT / 'git-hooks/pre-commit')],
+                                cwd=self.repo, env=self.env,
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(marker.exists(), 'pre-commit must resolve Bash from PATH')
