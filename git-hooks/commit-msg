@@ -71,12 +71,12 @@ is_throwaway_repo() {
 # リポジトリ固有の .git/hooks/commit-msg があれば最後に委譲する。
 # --git-path は core.hooksPath を尊重してこのhook自身を返すため使わない（自己再帰防止）。
 run_local_hook() {
-  git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+  git_dir="$(git rev-parse --git-common-dir 2>/dev/null)"
   local_hook="$git_dir/hooks/commit-msg"
   self="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
   if [ -n "$git_dir" ] && [ -x "$local_hook" ]; then
     local_real="$(cd "$(dirname "$local_hook")" 2>/dev/null && pwd -P)/commit-msg"
-    if [ "$local_real" != "$self" ]; then
+    if [ "$local_real" != "$self" ] && [ ! "$local_hook" -ef "$0" ]; then
       exec "$local_hook" "$@"
     fi
   fi

@@ -125,9 +125,15 @@ The two-seat setup (`$pair-watch`) is not under `skills/`, so the symlinks above
 
 These hooks are standard Git machinery, not an agent-only feature. They are in the kit as the last line of defense that holds agents and humans to the same rules. Set `git-hooks/` as the shared hooks directory via `core.hooksPath`. The command below sets it only when it is not set yet; if it is already set, it prints the current value and changes nothing:
 
-```bash
-git config --global core.hooksPath \
-  || git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+The shared hooks require Bash 3.2 or later on the PATH used by Git. If it is missing, install Bash with your OS package manager before enabling the hooks. The command below checks the Bash version in the current shell before configuring the hooks. Run it in the environment where you use Git. IDEs and GUI clients may have a different PATH; ensure Bash is available in each of those environments too.
+
+```sh
+if bash -c '(( BASH_VERSINFO[0] > 3 || (BASH_VERSINFO[0] == 3 && BASH_VERSINFO[1] >= 2) ))' 2>/dev/null; then
+  git config --global core.hooksPath \
+    || git config --global core.hooksPath /absolute/path/to/agent-kit/git-hooks
+else
+  printf '%s\n' 'Bash 3.2 or later is required; install it before enabling the hooks.' >&2
+fi
 ```
 
 If `core.hooksPath` already points to your own hooks directory, do not overwrite it. Either merge the kit's hooks into that directory, or choose which to use per repository with `git config --local core.hooksPath`. Repositories with plain `.git/hooks/` need nothing: the kit's hooks delegate to them after their own checks. To remove the kit, run `git config --global --unset core.hooksPath` **before** deleting the directory — deleting first leaves every repository silently running no hooks.

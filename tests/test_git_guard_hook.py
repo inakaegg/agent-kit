@@ -44,6 +44,101 @@ class GitGuardHookTests(unittest.TestCase):
     def test_git_add_all_is_blocked(self):
         self.assertEqual(run_hook("Bash", "git add --all"), 2)
 
+    def test_add_guard_with_global_options(self):
+        prefixes = (
+            'git -C .', 'git -C.', 'git -c core.quotePath=false',
+            'git -ccore.quotePath=false', 'git --git-dir .git',
+            'git --git-dir=.git', 'git --work-tree .', 'git --work-tree=.',
+            'git --namespace test', 'git --namespace=test',
+            'git --config-env=core.quotePath=QUOTE_PATH',
+            'git --config-env core.quotePath=QUOTE_PATH',
+            'git --attr-source HEAD', 'git --attr-source=HEAD', 'git --no-pager',
+            'git -C . -C . -c core.quotePath=false --work-tree=.',
+        )
+        for prefix in prefixes:
+            for target in ('.', './', '-A', '--all'):
+                with self.subTest(prefix=prefix, target=target):
+                    self.assertEqual(run_hook('Bash', prefix + ' add ' + target), 2)
+                    self.assertEqual(run_hook('Bash', 'AGENT_USER_DIRECTED=1 ' + prefix + ' add ' + target), 2)
+            with self.subTest(prefix=prefix, target='named'):
+                self.assertEqual(run_hook('Bash', prefix + ' add src/app.py .gitignore'), 0)
+
+    def test_push_guard_with_value_taking_global_options(self):
+        for prefix in ('git --config-env core.quotePath=QUOTE_PATH',
+                       'git --config-env=core.quotePath=QUOTE_PATH',
+                       'git --attr-source HEAD', 'git --attr-source=HEAD'):
+            with self.subTest(prefix=prefix):
+                self.assertEqual(run_hook('Bash', prefix + ' push https://example.invalid/x.git main'), 2)
+
+    def test_add_option_named_files_after_separator(self):
+        for prefix in ('git', 'git -C .', 'git -c core.quotePath=false'):
+            for name in ('-A', '--all'):
+                with self.subTest(prefix=prefix, name=name):
+                    self.assertEqual(run_hook('Bash', prefix + ' add -- ' + name), 0)
+            for args in ('-A -- named', '--all -- named', '-- .', '-- ./'):
+                with self.subTest(prefix=prefix, args=args):
+                    self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 2)
+
+    def test_add_pathspec_file_values_are_not_options(self):
+        for prefix in ('git', 'git -C .'):
+            for name in ('-A', '--all'):
+                for args in (f'--pathspec-from-file {name}', f'--pathspec-from-file={name}'):
+                    with self.subTest(prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 0)
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args + ' -A'), 2)
+
+    def test_add_in_shell_control_syntax(self):
+        forms = ('{ %s; }', 'if %s; then :; fi', '! %s',
+                 'while %s; do break; done', 'until %s; do break; done',
+                 'for x in 1; do %s; done', 'f() { %s; }; f', '(%s)')
+        for form in forms:
+            for prefix in ('git', 'git -C .', 'git -c core.quotePath=false'):
+                for args in ('-A', '--all', '.', '-- .'):
+                    with self.subTest(form=form, prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', form % (prefix + ' add ' + args)), 2)
+                for args in ('-- -A', '-- --all', '--pathspec-from-file -A'):
+                    with self.subTest(form=form, prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', form % (prefix + ' add ' + args)), 0)
+
+    def test_add_help_is_an_option_only_before_separator(self):
+        for prefix in ('git', 'git -C .'):
+            for help_arg in ('--help', '-h'):
+                for args in (f'-- . {help_arg}', f'-A -- {help_arg}',
+                             f'--pathspec-from-file {help_arg} -A'):
+                    with self.subTest(prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 2)
+                for args in (help_arg, '-A ' + help_arg, help_arg + ' -A', '-- ' + help_arg):
+                    with self.subTest(prefix=prefix, args=args):
+                        self.assertEqual(run_hook('Bash', prefix + ' add ' + args), 0)
+
+    def test_add_examples_in_quoted_data_are_allowed(self):
+        for example in ('git add -A; example', 'git -C . add -A; example',
+                        'git -c core.quotePath=false add --all; example',
+                        'example; git -C . add -A; example'):
+            for command in (f"grep -q '{example}' README.md",
+                            f"printf '%s' '{example}'", f'printf "%s" "{example}"'):
+                with self.subTest(command=command):
+                    self.assertEqual(run_hook('Bash', command), 0)
+        self.assertEqual(run_hook('Bash', "printf '%s' ';' git -C . add -A"), 0)
+
+    def test_add_redirections_are_not_flags_or_commands(self):
+        for command in ('git add 2>&1 -A', 'git add -A > --help',
+                        '2>/dev/null git add -A', 'git add -A < --help',
+                        'git add --pathspec-from-file 2 >out -A'):
+            with self.subTest(command=command):
+                self.assertEqual(run_hook('Bash', command), 2)
+        self.assertEqual(run_hook('Bash', "bash <<< 'git add -A'"), 2)
+
+    def test_comments_preserve_next_command_boundary(self):
+        for command in ('git status --short # before staging\ngit add -A',
+                        'ls -la # note\ngit add .',
+                        'ls -la # note\ngh repo create me/x --public',
+                        'echo hi # note\ngit push https://example.invalid/n.git main',
+                        'git add -A # --help',
+                        'echo hi # unclosed \"quote\ngit add -A'):
+            with self.subTest(command=command):
+                self.assertEqual(run_hook('Bash', command), 2)
+
     def test_git_add_named_files_pass(self):
         self.assertEqual(run_hook("Bash", "git add src/app.py docs/README.md"), 0)
 

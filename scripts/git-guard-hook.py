@@ -27,16 +27,14 @@ import sys
 # ユーザーの直接指示があるときだけ、remote作成系の遮断を外す印。コマンドの先頭に置く。
 USER_DIRECTED = re.compile(r"^\s*AGENT_USER_DIRECTED=1\s")
 
+BULK_STAGE_MESSAGE = ("git add . / -A / --all は使用禁止（共通AGENTS.md §8）。"
+                      "stageするfileを個別に指定する。")
+
 RULES = [
     (
         re.compile(r"\bgit\b[^|;&\n]*\s--no-verify\b"),
         "git の --no-verify は使用禁止（共通AGENTS.md §5）。"
         "hookの指摘を修正してから再実行する。",
-    ),
-    (
-        re.compile(r"\bgit\s+add\s+(?:[^|;&\n]*\s)?(?:\.|\./|-A|--all)(?:\s|$|[|;&])"),
-        "git add . / -A / --all は使用禁止（共通AGENTS.md §8）。"
-        "stageするfileを個別に指定する。",
     ),
 ]
 
@@ -47,8 +45,6 @@ RULES = [
 # あっても、実行位置に無ければ遮断しない。ただし文字列や heredoc を別のshellへ渡して実行する形
 # （bash -c, eval, bash <<EOF, xargs 等）は中身を実行位置とみなす。
 
-# `&&` `||` `;` `|` 改行、および単独の `&`（`2>&1` `&>` `>&` の `&` は除く）
-SEGMENT_SPLIT = re.compile(r"&&|\|\||[;|\n]|(?<![>&<|])&(?![&>])")
 # 文字列をshellとして実行するもの: 引数の文字列の中身を検査する
 SHELL_INTERPRETERS = {"bash", "sh", "zsh", "fish", "dash", "ksh", "eval"}
 # 後続のargvをそのまま1つのコマンドとして実行するもの: option と代入を除いた残りを検査する
@@ -148,7 +144,7 @@ def git_effective_dir(words: list[str], current: str | None) -> tuple[str | None
             name, _, value = w.partition("=")
             directory = repo_dir_from_git_dir(directory, value, name)
             i += 1
-        elif w in ("-c", "--namespace", "--exec-path") and i + 1 < len(words):
+        elif w in ("-c", "--namespace", "--exec-path", "--config-env", "--attr-source") and i + 1 < len(words):
             i += 2
         elif w.startswith("-"):
             i += 1
@@ -259,12 +255,29 @@ def is_repository_url(arg: str) -> bool:
 
 
 def check_git(words: list[str], current: str | None) -> str | None:
-    if "--help" in words or "-h" in words:
-        return None
     directory, rest = git_effective_dir(words, current)
     if not rest:
         return None
     sub = rest[0]
+    if sub == "add":
+        # 共通オプションを除いたargvで判定し、-C / -c の有無で保護を変えない。
+        if any(w in ("--help", "-h") for w in words[:len(words) - len(rest)]):
+            return None
+        options = True
+        bulk = False
+        args = iter(rest[1:])
+        for word in args:
+            if options and word in ("--pathspec-from-file", "--chmod"):
+                next(args, None)
+            elif options and word == "--":
+                options = False
+            elif options and word in ("--help", "-h"):
+                return None
+            elif word in (".", "./") or (options and word in ("-A", "--all")):
+                bulk = True
+        return BULK_STAGE_MESSAGE if bulk else None
+    if "--help" in words or "-h" in words:
+        return None
     if sub == "remote":
         k = 1
         while k < len(rest) and rest[k].startswith("-"):
@@ -340,8 +353,8 @@ def check_remote_create(words: list[str], current: str | None, depth: int = 0) -
     if head in SHELL_INTERPRETERS:
         # 別のshellへ渡した文字列は実行位置。中身を区間に分け直して見る
         for w in words[1:]:
-            for segment in SEGMENT_SPLIT.split(w):
-                inner = check_remote_create(split_words(segment), current, depth + 1)
+            for inner_words in shell_command_words(w):
+                inner = check_remote_create(inner_words, current, depth + 1)
                 if inner:
                     return inner
         return None
@@ -393,8 +406,8 @@ def remote_create_violations(command: str, cwd: str, depth: int = 0) -> list[str
     if depth < 5:
         for inner in substitutions(command):
             violations.extend(remote_create_violations(inner, cwd, depth + 1))
-    for segment in SEGMENT_SPLIT.split(command):
-        words = strip_env_assignments(split_words(segment))
+    for words in shell_command_words(command):
+        words = strip_env_assignments(words)
         if not words:
             continue
         if words[0] in ("cd", "pushd"):
@@ -404,6 +417,58 @@ def remote_create_violations(command: str, cwd: str, depth: int = 0) -> list[str
         if message:
             violations.append(message)
     return violations
+
+
+def shell_command_words(command: str) -> list[list[str]]:
+    """制御構文内のコマンドを拾う。引用された区切り文字はデータのまま保つ。"""
+    lexer = shlex.shlex(command, posix=False, punctuation_chars="();|&<>\n")
+    lexer.commenters = ""
+    lexer.whitespace = " \t\r"
+    lexer.whitespace_split = True
+    groups: list[list[str]] = []
+    current: list[str] = []
+    try:
+        for token in lexer:
+            if token.startswith("#"):
+                if current:
+                    groups.append(current)
+                    current = []
+                # shlexが先読みした改行を二重に消費しない。
+                if not command[:lexer.instream.tell()].endswith("\n"):
+                    lexer.instream.readline()
+                continue
+            if token in ("{", "}") or all(c in "();|&\n" for c in token):
+                if current:
+                    groups.append(current)
+                    current = []
+            else:
+                current.append(token)
+    except ValueError:
+        # 未完の入力でも、読み取れたコマンド区間は検査する。
+        pass
+    if current:
+        groups.append(current)
+    commands = []
+    for group in groups:
+        # リダイレクト先はGitの引数ではない。here-stringはshellが実行し得るので残す。
+        args = []
+        tokens = iter(group)
+        for token in tokens:
+            if token in (">", ">>", ">|", "<", "<>", ">&", "<&", "&>", "&>>"):
+                if args and args[-1].isdigit() and all(
+                    w in ("if", "then", "elif", "else", "while", "until", "do", "!")
+                    for w in args[:-1]
+                ):
+                    args.pop()
+                next(tokens, None)
+            else:
+                args.append(token)
+        group = args
+        while group and group[0] in ("if", "then", "elif", "else", "while", "until", "do", "!"):
+            group = group[1:]
+        if group:
+            commands.append(split_words(" ".join(group)))
+    return commands
 
 
 def main() -> int:
@@ -423,6 +488,10 @@ def main() -> int:
     violations = remote_create_violations(command, cwd)
     if not violations:
         return 0
+    # ユーザーの直接指示の例外はremote操作だけに適用する。
+    if BULK_STAGE_MESSAGE in violations:
+        print(f"git-guard: {BULK_STAGE_MESSAGE}", file=sys.stderr)
+        return 2
     # ユーザーの直接指示は1つの操作に対するもの。印があっても、remote作成系の区間が2つ以上あれば通さない。
     if directed and len(violations) == 1:
         return 0
