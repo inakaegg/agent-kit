@@ -86,5 +86,5 @@
 
 - Specification:
 - Architecture / ADR:
-- Active plan: `_ai/active-plan.md`
+- Active plan: `_ai/tasks/<開始日-slug>/active-plan.md`
 - Verification:
