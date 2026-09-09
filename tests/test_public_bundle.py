@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib.util
+import contextlib
+import io
 import re
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +21,62 @@ def load_validate_kit():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+class InstructionSizeTests(unittest.TestCase):
+    def validate(self, agents: str, claude: str = "", newline: str = "\n") -> str:
+        vk = load_validate_kit()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name, content in (("AGENTS.md", agents), ("CLAUDE.md", claude)):
+                (root / name).write_bytes(content.replace("\n", newline).encode("utf-8"))
+            error = io.StringIO()
+            with patch.object(vk, "ROOT", root), contextlib.redirect_stderr(error):
+                try:
+                    vk.validate_agents_size()
+                except SystemExit as exc:
+                    self.assertEqual(exc.code, 1)
+                    return error.getvalue()
+            return ""
+
+    @staticmethod
+    def agents_text(characters: int, trailing_newline: bool) -> str:
+        suffix = "\n" * 59 + ("終\n" if trailing_newline else "終")
+        return "規" * (characters - len(suffix)) + suffix
+
+    def test_character_limits_and_newline_normalization(self):
+        for newline in ("\n", "\r\n", "\r"):
+            for trailing_newline in (False, True):
+                for name, limit in (("AGENTS.md", 11000), ("CLAUDE.md", 2000)):
+                    for delta in (-1, 0, 1):
+                        with self.subTest(newline=newline, trailing=trailing_newline,
+                                          name=name, delta=delta):
+                            if name == "AGENTS.md":
+                                agents = self.agents_text(limit + delta, trailing_newline)
+                                claude = ""
+                            else:
+                                agents = self.agents_text(120, False)
+                                claude = "文" * (limit + delta - int(trailing_newline))
+                                claude += "\n" if trailing_newline else ""
+                            error = self.validate(agents, claude, newline)
+                            if delta > 0:
+                                self.assertIn(name, error)
+                                self.assertIn(str(limit + 1), error)
+                                self.assertIn(str(limit), error)
+                            else:
+                                self.assertEqual(error, "")
+
+    def test_existing_line_limits(self):
+        for count in (59, 60, 160, 161):
+            for trailing_newline in (False, True):
+                with self.subTest(count=count, trailing=trailing_newline):
+                    agents = "\n".join(["規"] * count) + ("\n" if trailing_newline else "")
+                    error = self.validate(agents)
+                    if count in (59, 161):
+                        self.assertIn("AGENTS.md", error)
+                        self.assertIn(str(count), error)
+                    else:
+                        self.assertEqual(error, "")
 
 
 class BundleFilesTests(unittest.TestCase):

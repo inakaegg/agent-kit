@@ -1,5 +1,7 @@
 # 指示をどこへ置くか
 
+本書は配置判断の入口とする。タスク記録を作る前に、`docs/policies/writing-and-docs.md` の「タスク記録の配置」を読み、main checkout側の正本へ置く。
+
 ## 判定順
 
 新しい注意事項やworkflowが生まれたときは、次の順で置き場所を決める。
@@ -7,9 +9,9 @@
 1. **機械的に検出・拒否できるか**
    - Yes → test、type、lint、schema、Hook、CI、wrapper script
 2. **今回のtaskだけか**
-   - Yes → `_ai/TASK.md`、Issue、task spec
+   - Yes → `_ai/tasks/<開始日-slug>/TASK.md`、Issue、task spec
 3. **作業中に変わる仮説・進捗か**
-   - Yes → `_ai/active-plan.md`
+   - Yes → `_ai/tasks/<開始日-slug>/active-plan.md`
 4. **特定projectだけか**
    - Yes → projectの `AGENTS.md`、project docs
 5. **特定directory・moduleだけか**
@@ -28,8 +30,8 @@
 | 内容 | 置き場所 |
 |---|---|
 | push・公開・課金の権限境界 | 共通 `AGENTS.md` |
-| 現在のgoal、scope、acceptance | `_ai/TASK.md` |
-| 現在の仮説、試行、次の一手 | `_ai/active-plan.md` |
+| 現在のgoal、scope、acceptance | `_ai/tasks/<開始日-slug>/TASK.md` |
+| 現在の仮説、試行、次の一手 | `_ai/tasks/<開始日-slug>/active-plan.md` |
 | build・lint・testの正確なcommand | project `AGENTS.md` / `docs/quality/verification.md` |
 | framework・package manager・coding style | project `AGENTS.md` / lint / formatter |
 | 禁止API・禁止import | lint / architecture test |

@@ -6,7 +6,9 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 テンプレート、検査スクリプトのセットです。汎用の雛形ではなく、個人開発の実運用で
 使っている構成をそのまま固めたもの（いわゆるopinionated）です。
 
-エージェントが常時読み込むのは160行の `AGENTS.md` だけに絞り、詳しい手順はSkillへ、
+常時読む規則は `AGENTS.md`、Claude Code用の補足は `CLAUDE.md` に置き、適用設定も読み込みます。
+詳しいpolicy・Skillは作業に応じて読み、入口の文章量は行数と文字数の両方で検査します。
+
 タスクの合格条件・作業中の仮説・恒久仕様はそれぞれ別のファイル（`templates/` 参照）へ、
 機械的に判定できる規則は検査スクリプトへ分離しています。権限境界（push・公開・課金は
 明示許可制）と停止条件を、CodexとClaude Codeの区別なく全プロジェクトで揃えるのが役割です。
@@ -21,8 +23,8 @@ CodexとClaude Codeの両方で共用する、作業規約（`AGENTS.md`）、�
 2. **完全自動ループは、合格を機械判定できる閉じたタスクに限る** — 一括migrationや
    lint掃討のように「done」をテストや数値で判定できる作業以外では、エージェントを
    無人で回さない。ソフトウェア開発の大半は、作っている途中で不明確な点が現れ、
-   質問と判断を通じて仕様が固まっていく。だから既定は、自走距離を伸ばしつつ本当の
-   判断点でだけ人間へ戻す**監督付き並行体制**とする
+   質問と判断を通じて仕様が固まっていく。複数セッションで分担するときは、自走距離を伸ばしつつ本当の
+   判断点でだけ人間へ戻す**監督付き並行体制**を既定とする
    （実装役＋監視役の2セッション、[pair-watch](https://github.com/inakaegg/pair-watch) プラグイン）。
 3. **検証は自己申告ではなく証拠で** — 非自明な変更は、実装した本人とは別の文脈の
    レビュアーがgate制で検査する（`skills/independent-review/`）。実行していない
@@ -142,7 +144,7 @@ for skill_dir in "$agent_kit_dir"/skills/*; do
 done
 ```
 
-2チャット体制（`$pair-watch`）は `skills/` に含まれないため、上のsymlinkでは入りません。Claude Codeのプラグインとして追加してください。
+複数セッションで分担するときは `$pair-watch` を使います。`skills/` に含まれないため、上のsymlinkでは入りません。単独作業には不要で、通常の作業ループで続行できます。並行作業を明示的に依頼されて未導入だった場合は、無断で単独作業へ切り替えず、導入方法を確認します。Claude Codeへの導入コマンドは次のとおりです。
 
 ```text
 /plugin marketplace add https://github.com/inakaegg/pair-watch
@@ -432,8 +434,10 @@ python3 scripts/validate-kit.py
 python3 -m unittest discover -s tests -v
 ```
 
-検証は、必須ファイル、Skill frontmatter、参照先、個人・端末固有情報、
-`AGENTS.md` の大きさ、Claude adapterを確認します。
+検証は、必須ファイル、Skill frontmatter、参照先、個人・端末固有情報、規則の文章量、Claude adapterを確認します。
+`AGENTS.md` は60〜160行かつ11,000文字以下、`CLAUDE.md` は2,000文字以下とします。
+UTF-8を復号し、CRLF・CRをLFへ揃えて、実際の改行も含めて文字数を数えます。
+これは文章量の検査であり、token数・費用・応答品質の測定ではありません。
 
 ## 対応する公式仕様
 

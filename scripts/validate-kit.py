@@ -120,6 +120,12 @@ def validate_required_files() -> None:
 
 
 def validate_agents_size() -> None:
+    # read_text normalizes CRLF/CR to LF, so checkout newline style does not
+    # change the budget. Count Unicode characters, including actual newlines.
+    for name, limit in (("AGENTS.md", 11000), ("CLAUDE.md", 2000)):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        if len(text) > limit:
+            fail(f"{name} is too long: {len(text)} characters (limit: {limit})")
     lines = (ROOT / "AGENTS.md").read_text(encoding="utf-8").splitlines()
     if len(lines) > 160:
         fail(f"AGENTS.md is too long: {len(lines)} lines (limit: 160)")

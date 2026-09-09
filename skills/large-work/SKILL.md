@@ -68,7 +68,7 @@ corpus、評価基盤、migration script等の中間成果物を、製品成果�
 
 ## 4. 実行状態
 
-`_ai/active-plan.md` または専用state fileへ残す。
+`_ai/tasks/<開始日-slug>/active-plan.md` または同じタスクdirectory内の専用state fileへ残す。
 
 ```markdown
 ## Batch N
