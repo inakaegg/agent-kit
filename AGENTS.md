@@ -4,12 +4,12 @@
 
 ## 1. 適用範囲と優先順位
 
-- 本規則は、いま作業しているコーディングエージェント自身に適用する。「別のツール向け」と解釈して対象外にしてはならない。
+- 本規則は作業中のエージェント自身に適用し、「別のツール向け」として除外しない。
 - 指示の優先順位は、**最新のユーザー指示 → プロジェクト固有の指示 → 本ファイル → Skill・プラグイン** とする。
 - 変更対象へ適用される、ルートから対象ディレクトリまでの `AGENTS.md`、`CLAUDE.md`、その他の明示的な指示を読む。
-- 本文中の `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は、agent-kit（本ファイルの実体がある場所）内を指す。symlink経由で読んでいる場合は実体の場所を辿る。作業対象プロジェクトの `docs/` とは別物である。
+- `docs/policies/`・`docs/terminology-ja.md`・`docs/instruction-placement.md`・`docs/skill-authoring.md`・`templates/`・`scripts/` は本ファイルの実体があるagent-kit内を指す。symlinkは実体へ辿り、作業repoの同名pathと区別する。
 - 上位の指示を下位の指示が暗黙に弱めてはならない。矛盾があり、結果が実質的に変わる場合は推測で選ばず停止して報告する。
-- 一部の規則は設定トグルでON/OFFできる。作業開始時に、kitの `agent-settings.env` → 作業repo直下の `agent-settings.env` → 同 `agent-settings.local.env`（git管理外・一時切替用）の順に読み、後の層を優先する。例外として担当関連5キー（`REVIEW_MODEL_*`、`REVIEW_REQUIRE_OTHER_LINEAGE`、`WRITING_MODEL_DEEP`）と `DOCS_LEVEL` は、localの値が追跡対象の設定と異なれば停止する。これらの値はgit管理下の `agent-settings.env` で変更する。書式は `KEY=value` の行（`#` はコメント）。本文中の `KEY=false` 等の括弧書きはこの設定を指す。キーと既定値の正本はkitの `agent-settings.env` で、キーの追加は§12と同様にユーザー確認を得て行う。権限境界（§3）と証拠系の禁止事項（§5）はトグル化の対象外で常に有効とする。ただし `AUTO_MERGE_PRIVATE` は§3が定める範囲での唯一の例外とし、例外の追加は§12と同じくユーザー確認を要する。
+- 開始時にkitの `agent-settings.env` → 作業repoの同ファイル → `agent-settings.local.env`（git管理外）の順に読み、後の層を優先する。書式は `KEY=value`（`#` はコメント）。担当関連5キー（`REVIEW_MODEL_*`、`REVIEW_REQUIRE_OTHER_LINEAGE`、`WRITING_MODEL_DEEP`）と `DOCS_LEVEL` は、localと追跡対象の値が異なれば停止し、変更はgit管理下のenvで行う。キー・既定値の正本はkitのenvで、キー追加には§12同様の確認を要する。本文の `KEY=false` 等はこの設定を指す。権限境界（§3）と証拠禁止（§5）は常に有効でトグル対象外。ただし§3の `AUTO_MERGE_PRIVATE` だけを例外とし、例外追加にも§12同様の確認を要する。
 - 本ファイルへ、現在のタスクの仕様、試行履歴、技術スタック固有の細則、長い操作手順を追加しない。
 
 ## 2. 情報の正本
@@ -22,7 +22,7 @@
 - 検証コマンドと証跡：プロジェクト固有の `AGENTS.md` または `docs/quality/verification.md`
 - 長期的な設計理由：`docs/decisions/` の設計判断の記録、または既存の設計文書
 
-`_ai/` は常にmain checkout側のdirectoryを正本とし、linked worktreeの側へ置かない（git管理外のため、worktreeの削除と同時に記録を失う）。worktreeで作業するタスクの契約・計画・レビュー資料もmain checkout側の `_ai/tasks/` へ書く。`_ai/` の内部はタスク単位で分ける。ディレクトリ名は「開始日-slug」（例 `2026-08-25-search-api`）とし、slugは原則そのtaskのbranch名と揃える（既存の日付なしdirectoryは改名しなくてよい）。契約は `_ai/tasks/<開始日-slug>/TASK.md`、作業状態は同directoryの `active-plan.md`、受け渡し・レビュー資料も同directory（レビューは `reviews/` 配下）へ集める。`TASK.md` の冒頭にbranch名・期間・結果（完了/中止/引き継ぎ先）を1行ずつ書く。別タスクの契約・計画ファイルを上書き・転用せず、同じbranch・worktreeで複数タスクが並行する場合もタスクごとに別directoryを使い、着手時に既存directoryを確認して重複しないslugを選ぶ。既存のSkill・テンプレートにある `_ai/TASK.md` という表記は、現在のタスクの契約ファイルを指すと読み替える。`_ai/` へ置くのはこの3種だけとする。タスク完了後もdirectoryは過去記録として残すが、完了済みタスクの文書を現在の契約として読まない。増えて見通しが悪くなったら、削除ではなく整理（アーカイブ等）をユーザーへ提案する。進行中タスクの調査、分析、経過報告はチャット履歴に残し、ファイルにしない。チャット履歴だけを永続仕様の正本にしない。実装後も必要な仕様・合意・制約は、適切なリポジトリ内文書へ残す。
+`_ai/` はmain checkout側を正本とし、`_ai/tasks/<開始日-slug>/` でタスクごとに分ける。契約・計画・受け渡し・レビュー資料を作る前に、`docs/policies/writing-and-docs.md` の「タスク記録の配置」を読む。
 
 外部の情報や素材（資料、dataset、音源、画像など）を探すとき、日本語・英語の情報源で見つからなければ、中国語の情報源も検索対象に含める。日本語・英語で見つからないことを、そのまま「存在しない」の根拠にしない。中国語の情報源から採る場合も、ライセンスと出どころの確認は他と同じ基準で行う。
 
@@ -32,7 +32,7 @@
 - 質問・意見・調査・原因確認の依頼では、明示されない限りファイルを変更しない。問題を発見した場合は、根拠と修正案を報告して止める。
 - 実装・修正・更新が明示された場合は、対象ファイルの変更と、§8を満たしたその作業分の**ローカルcommit**を行ってよい（`AUTO_COMMIT=false` のときはcommitせず変更のみ行い、commitはユーザーへ委ねる）。ユーザーがcommit不要と指示した場合は従う。
 - read-onlyの `git status`、`git diff`、`git log`、検索、テスト実行は必要に応じて行ってよい。
-- push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。例外として `AUTO_MERGE_PRIVATE=true` のとき、他者と共有しない非公開repositoryでは、必要なレビューをすべて通したtask branchのdefault branchへのローカルmerge（`--no-ff`）を許可なく行ってよい。同系統での暫定通過中は「通した」に当たらない。pushとPRはこの例外に含めない。
+- push、PR作成・更新、merge、rebase、force push、release、deploy、クラウド設定変更、公開範囲変更、外部サービスへの書込みは、そのターンの明示許可を必要とする。例外として `AUTO_MERGE_PRIVATE=true` のとき、他者と共有しない非公開repositoryでは、必要なレビューがすべてLGTMのtask branchのdefault branchへのローカルmerge（`--no-ff`）を許可なく行ってよい。自己検証・記録付きの例外通過、同系統での暫定通過はこの条件を満たさない。pushとPRはこの例外に含めない。
 - 「PRを作成して」は、現在のfeature branchの必要なpushとPR作成を許可するが、merge、base branchへのpush、public化を許可しない。
 - **remoteの無いlocal repositoryの初回push（remote repositoryの作成を含む）と、既存repositoryのpublic化は、エージェントが一切行わない（NEVER）。** これらはユーザー自身が行う。方針への同意、「準備して」「進めて」、提案文中の「許可が要ります」への返事は許可にならない。例外は、ユーザーがその発話で対象のrepositoryを名指しし、その操作そのものを直接指示した場合だけとし、そのときは `AGENT_USER_DIRECTED=1` を前置してコマンドを実行する（`scripts/git-guard-hook.py` が機械的に遮断するため）。
 - 新規のrepository、package、container、bucket等はprivateを既定とする。public化は対象と範囲を明示した許可がある場合だけ行う。
@@ -41,14 +41,14 @@
 - AI model・大容量dataのdownload前に保存先と必要容量を確認する。設定済みの保存先が利用不能なら、別の場所へ自動で切り替えず停止する。
 - シークレット、認証情報、個人情報、本番データ、署名鍵を表示、ログ出力、コピー、commitしない。
 - ファイル変更や外部操作の可能性があるサブエージェント・並列エージェントは、ユーザーがそのターンで許可した場合だけ使用する。read-onlyの調査・検索・要約だけを行うサブエージェントは、追加課金となる外部プロセスを起動しない範囲で許可なく使用してよい。ユーザーがBMadのSkillまたはworkflowを起動した場合は、そのworkflowが完了または中止するまで、遂行に必要なサブエージェント・並列エージェントの使用を許可済みとみなす。§7の独立レビューに限り、1段階のレビューにつきリモートに変更を加えない別CLIプロセスを1つ起動してよい。いずれも追加課金が生じる場合は先に確認する。
-- 文書の執筆担当は、pathや拡張子ではなく**主な読者**で判定する。人間を主な読者とする文書は、そのタスクを担当しているセッション自身が執筆・編集し、担当には、ユーザーが許可した並行体制で対象ファイルの執筆を割り当てられた独立した対話席を含む。未割当の別agentやサブエージェントに代筆させない。設計・仕組みの解説文書は深い思考用モデル（`WRITING_MODEL_DEEP` が示す担当）のセッションが書く。AI・agentだけが使う文書は別agentが作成してよいが、規則ファイル（本ファイル、projectの `AGENTS.md`・`CLAUDE.md`）の本文編集は `WRITING_MODEL_DEEP` が示す担当のセッションだけが行う。判定基準と分担の詳細は `docs/policies/writing-and-docs.md` に従う。本項は§1の優先順位を変更せず、最新のユーザー指示が優先する。
+- 人間向け文書は、執筆を担当するセッション自身が書き、未割当の別agentへ代筆させない。設計・仕組みの解説と規則ファイル本文は `WRITING_MODEL_DEEP` の担当が書く。AI専用文書は別agentが作成してよい。文書の作成・実質更新前に、主な読者による担当の判定と分担を `docs/policies/writing-and-docs.md` で確認する。最新のユーザー指示が優先する。
 
 ## 4. 必須の作業ループ
 
 1. **理解する** — 最新依頼、適用指示、関連仕様、既存コード、近傍テストを読む。古いplanや完了済みレビューを現在要件として扱わない。
 2. **事実を確認する** — データ、履歴、schema、外部responseの存在・形に依存する判断は、実物を確認する。観測事実、ユーザー要件、未確認の仮説を混同しない。
 3. **変更前の状態を取る** — 実用上可能なら、変更前の再現、安価な対象テスト、現在の失敗を記録する。既存失敗を隠さず、無関係な修正へ範囲を広げない。
-4. **契約と仕様を固定する** — 契約の重さは§7の区分に連動させる。動作に影響する小さな変更は契約なし、通常対象作業は目的・合格条件・検証の3項目、重リスク作業は目的、範囲外、合格条件、検証、停止条件の全項目を `_ai/tasks/` 配下の `TASK.md` へ書く。同じ機能を扱う既存の設計文書・対応表がある場合は、その該当制約を仕様へ転記し、破棄する制約は破棄の旨と理由を明示する。ユーザー指示にも実データ確認にも由来しない設計判断には `[エージェント判断]` を付け、重リスク作業では実装着手前に一覧で報告する。§7の重リスク作業では、仕様を確定した後、実装計画を書く前に仕様レビューを通す。作業中の仮説・試行・次の一手はactive planへ分ける。プロジェクト成立を否定し得る未確認前提は最優先の検証項目として明示し、その結果に依存する作業より先に最小コストで検証する。
+4. **契約と仕様を固定する** — 小さな挙動変更は契約なし、通常対象作業は目的・合格条件・検証、重リスク作業は範囲外・停止条件も `TASK.md` に書く。作成前に `docs/policies/writing-and-docs.md` の「契約の内容」を読み、既存制約とエージェント判断を明示する。重リスクでは仕様レビュー後に計画を書く。成立を否定し得る未確認前提は、依存する作業より先に最小コストで検証する。
 5. **最小構成を選び計画する** — OS標準、成熟したライブラリ、既存API・規格、既存処理の単純な組合せを先に評価する。利用者価値が同等なら、規則・状態・依存が少ない案を選ぶ。選んだ方式、変更対象、検証手順を実装計画としてactive planへ書く。§7の重リスク作業では、実装へ着手する前に実装計画レビューを通す。
 6. **小さく変更する** — タスクを満たす一貫した最小差分にする。無関係な機能、依存、rename、整形、大規模refactorを混ぜない。
 7. **テストする** — 挙動変更にはテストを追加・更新する。再現可能なbug fixでは、旧実装で失敗し新実装で成功するリグレッションテストを先に書き、fail→passの両方を実行して確認する。新規機能でも自動テスト可能な部分は実装前または実装と同時にテストを書くことを既定とし、テスト不能な場合は理由と代替検証を記録する。
@@ -82,27 +82,20 @@
 
 ## 7. 独立レビュー
 
-- レビューの重さは変更の種類で決める。**動作に影響しない変更**（誤字・書式・コメント・文書の言い回し）はレビューなしで、CIと自己点検のみとする。**動作に影響する小さな変更**（設定値1つ、規則文書の1段落以内の追記、1関数内の修正など）は実装レビュー1段階だけとする。それ以上は2区分に分ける。**重リスク作業**は、公開API、永続化、並行・非同期状態、認証・security、課金、migration、deploy、または広いarchitectureに関わる変更。**通常対象作業**は、それ以外のユーザー可視動作か、PR化する非自明な変更。重リスクの条件に当たる変更は、大きさによらず重リスク作業とする。
-- レビューの段階は**仕様レビュー → 実装計画レビュー → 実装レビュー**とする（過去の文書・Skillにある gate 1/2/3 と「計画レビュー」の表記もこの3つを指す）。重リスク作業は3段階すべてを順に通す。通常対象作業は仕様と実装計画を1つのレビューにまとめて通し（gate 1+2）、実装後に実装レビューを通す（`INDEPENDENT_REVIEW=false` のときは通常対象作業と小さな変更のレビューを免除する。重リスク作業の3段階は免除しない）。各段階で `VERDICT: LGTM` を得るまで次へ進まない。各段階のレビューは2巡までとし、残った指摘は正しさ・security・データ消失・互換性に関わるものだけ対応し、他は課題として記録して通過する。
-- レビュー担当は、その成果物を作っていない、履歴を共有しない別セッションを必須とする。別のtool/modelを使うことは重リスク作業でだけ必須とし（次項）、それ以外は呼び出し元のCLIの候補を既定とする（利用枠を呼び出し元の側へ寄せるため。順序の規則は `docs/policies/review.md`）。どのモデルを担当にするかは設定キーで決める（重リスク作業は `REVIEW_MODEL_HEAVY`、通常対象作業は `REVIEW_MODEL_DEFAULT`。書式と選び方は `docs/policies/review.md`）。**`REVIEW_REQUIRE_OTHER_LINEAGE=true` のあいだ、重リスク作業のレビュー担当は、別系統のモデルが使える限り実装担当と別系統を必須とする**。
-- 別系統が利用上限等で使えないときは、通常対象作業は同系統で進めてよい。重リスク作業は同系統で暫定通過として先へ進み、別系統が使えるようになった時点でその段階をやり直す（暫定通過の事実とやり直しの残件を契約へ記録する）。**これらのモデルキーの値を変えてよいのは、ユーザーの明示指示があるときだけとする（エージェントが自分の判断で緩めない）。** 緩めた場合は、変えたキー・値・理由をタスクの契約へ書き、標準の担当が使えるようになった時点で該当レビューをやり直す。
-- 人間向け文書の新規作成と本文の実質更新は、`REVIEW_MODEL_READABILITY` が示す担当の、履歴を共有しない別セッションによる読みやすさレビューを通してからcommitする（`READABILITY_REVIEW=false` または `DOCS_LEVEL=minimal` なら不要）。公開する文書と外部へ提出する文書は `DOCS_LEVEL` によらず対象とする。誤字修正等の軽微変更は対象外。
-- 指摘は**修正 / 記録のみ / 誤検知として反証**へ仕分け、裏付けのない指摘を修正必須として扱わない。指摘の件数上限、レビューの回数、修正必須が残った場合の扱いは `docs/policies/review.md` に従う。
-- review-readyのPRを作成したら、その場で `$pr-review-loop` に入り、最新headに対するbot review・CI・required checksを収束条件まで回す（botが利用上限等で止まっている場合の扱いも同Skillに従う。Draftでは状態の確認と記録に留める）。動作に影響しない変更のPRは、CIとprojectが要求するreview signalの確認だけでよく、独立レビューは要求しない。指摘への修正は§3の許可範囲で行い、そのターンに修正の許可がなければ指摘を報告して止める。mergeは§3のとおり明示許可を必要とする（`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、必要なレビューがすべてLGTMなら許可不要）。
+- レビューの要否を判断するとき、および実施・統括する前に `docs/policies/review.md` を読む。動作に影響しない変更はCIと自己点検のみ、小さな挙動変更は実装レビュー、通常対象作業は仕様・計画の合同レビューと実装レビューを行う。詳細規則で定義する重リスク作業は大きさによらず仕様→計画→実装の3段階を順に通す。`INDEPENDENT_REVIEW=false` なら通常対象作業と小さな変更を免除するが、重リスクの3段階は免除しない。
+- 通常は各段階で `VERDICT: LGTM` を得て次へ進む。自己検証・2巡終了時の例外通過、追加の解消確認、未完了時の停止は `docs/policies/review.md` の「通過条件」に従う。例外通過をLGTMと報告しない。
+- レビュー担当は成果物を作っていない、履歴を共有しない別セッションとする。担当は `REVIEW_MODEL_HEAVY` / `REVIEW_MODEL_DEFAULT` で解決し、重リスクで `REVIEW_REQUIRE_OTHER_LINEAGE=true` なら利用可能な別系統を必須とする。別系統が利用不能なら暫定通過を契約に記録し、復旧後にその段階をやり直す。
+- 担当モデルのキーはユーザーの明示指示なしに変更しない。緩和したキー・値・理由を契約へ記録し、標準担当の復旧後に該当レビューをやり直す。
+- 人間向け文書の新規作成・実質更新は `REVIEW_MODEL_READABILITY` の別セッションによるレビュー後にcommitする。`READABILITY_REVIEW=false` または `DOCS_LEVEL=minimal` なら免除するが、公開・提出文書は `DOCS_LEVEL` によらず対象とする。誤字修正等は対象外。
+- 指摘は修正・記録のみ・反証に仕分ける。裏付けのない指摘を必須にせず、確認済みの重大な修正必須を件数だけで格下げしない。
+- review-readyのPR作成後は `$pr-review-loop` で最新headのbot・CI・required checksを収束させる。Draftは状態確認と記録のみ。動作に影響しない変更はCIとproject要求のreview signalだけでよい。修正・mergeの許可は§3に従う。
 
 ## 8. Gitとローカルcommit
 
-- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。ただし編集・commit・branch切替を行い得る他のセッションが同じcheckoutを使っているときは、`REQUIRE_WORKTREE` の値や変更の種類によらず、git管理下のファイルの編集とcommitをtask branchの別worktreeで行う。いないと確認できないときも同様とし、read-onlyの調査・レビューだけのセッションは数えない。他のセッションのbranch切替でHEADが動き、commitが意図しないbranchへ乗るためである。git管理外の `_ai/` は§2のとおりmain checkout側へ書く。既にそのtask専用のlinked worktreeにいて、編集し得る他のセッションがそれを使っていない場合は、新しいworktreeを重ねて作らない。merge済みのworktreeは `AUTO_PRUNE_WORKTREES=true` なら許可なく削除してよい（未commit差分・ignoredなローカルファイルが残るものは除く。確認手順は `docs/policies/git-and-remote.md`）。branchはgraphでつながりを見るために残し、削除は明示許可がある場合だけ行う。
-- 公開repositoryでは、誤字修正などの軽微な文書更新も含め、`main`（master等のdefault branch）への取り込みを常にPR経由とし、mainへ直接commit・pushしない。軽微な文書更新もtask branchを作って編集・commitする（別worktreeは不要。ただし他のセッションと同じcheckoutを使う場合は前項のとおり別worktreeを作る）。push・PR作成は§3のとおり明示許可を得てから行い、許可がない間はbranchへのcommitと報告に留める。公開か確認できないrepositoryは公開として扱い、非公開でも他者と共有するrepositoryは公開と同じ扱いとする。
-- ユーザーが管理権限を持つ公開repositoryには、branch protectionを設定して上記を機械的にも強制する。設定・変更の実行は§3のとおり明示許可を得て行い、protectionの内容と公開状態の確認手順は `docs/policies/git-and-remote.md` に従う。
-- 他者と共有しない非公開repositoryでは従来どおり、軽微な文書更新に限り、branchとstatusを確認し他作業の差分を巻き込まない場合だけ `main` のcheckoutで行ってよい。他のセッションと同じcheckoutを使う場合は、この場合もtask branchと別worktreeを作る。
-- コード・製品挙動の変更か軽微な文書更新か、またはrepositoryの公開・共有の区分を判断できない場合は、編集を始める前にユーザーへ確認する。
-- 調査とread-only操作は現在のcheckoutで行ってよい。
-- 編集・commit前に、branch、status、対象diffを確認する。意図しない既存差分、untracked file、別作業を巻き込まない。
-- 実装依頼に基づくローカルcommitは、許可範囲の変更だけ、必要な検査とレビューの通過、1commit 1目的、秘密情報・大容量生成物・環境依存絶対pathなし、を満たす場合だけ行う。
-- stageは意図したfileを個別指定する。`git add .`、`git add -A`、directory丸ごとのaddを既定で使わない。untracked fileを無断削除しない。
-- 未pushで直前commitと同じ目的の追加修正はamendしてよい。共有済み履歴のrebase、squash、force pushは明示許可とrepository方針がある場合だけ行う。
-- 詳細なbranch、worktree、PR、visibility、merge方針は、Git作業時だけ `docs/policies/git-and-remote.md` を読む。
+- 編集場所の選択前とGit操作前に `docs/policies/git-and-remote.md` を読む。コード・製品挙動の変更はmain checkoutで行わず、task branchと別worktreeを使う（`REQUIRE_WORKTREE=false` なら別worktree不要）。他の編集セッションがいる、またはいないと確認できないcheckoutでは、変更種別や設定によらず別worktreeを使う。既に専用worktreeにいる場合の継続条件も詳細規則に従う。
+- 公開・共有repositoryは軽微な文書更新でもtask branchからPR経由で取り込む。公開状態が未確認なら公開扱いとし、変更種別・公開共有区分を判断できなければ編集前に確認する。非公開・非共有repoでの軽微文書更新、branch protection、worktreeの整理は詳細規則に従う。
+- 編集・commit前にbranch、status、対象diffを確認し、別作業を巻き込まない。ローカルcommitは許可された変更だけを、必要な検査・レビュー後に1目的でまとめ、秘密情報・大容量生成物・環境依存の絶対pathを含めない。
+- stageはfileを個別指定し、`git add .`・`git add -A`・directory丸ごとのaddを既定にしない。untracked fileを無断削除しない。未pushの直前commitと同目的の修正はamendしてよい。共有履歴のrebase・squash・force pushは明示許可とrepo方針を要する。
 
 ## 9. 必要時だけ読む手順
 
@@ -114,7 +107,7 @@
 - 構成図・経路図：`$architecture-diagram`。設計資料・命名の前の対応表作成：`$semantic-generation`
 - CLI優先・実行可能経路の確認・fixture・解説文書：`docs/policies/quality-details.md`
 - 契約・active planの雛形：`templates/TASK.md` と同directoryの `ACTIVE_PLAN.md`。project固有AGENTS・検証基盤の雛形：同directoryの `PROJECT_AGENTS.md`・`VERIFICATION.md` と `scripts/agent-check.example.sh`
-- 複数エージェントの並行作業（2チャット体制）の開始：`$pair-watch`（[pair-watch](https://github.com/inakaegg/pair-watch) プラグイン）。複数セッションで分担する作業は、素のセッション間メッセージやサブエージェント分担ではなくこの体制を既定とする。タスクを渡したチャットが監視役になり、実装役の席を自分で起動して指示を送る。Codexの席は監視役（ClaudeまたはCodex）からのinbox指示を待つ。Skill同梱の最低限手順より本kitの契約・レビュー規則が優先される（§1の優先順位どおり）
+- 複数セッションの分担は `$pair-watch`（[pair-watch](https://github.com/inakaegg/pair-watch)）を既定とし、素のセッション間メッセージやサブエージェント分担を既定にしない。依頼を受けたチャットが監視役として実装席を起動・指示し、Codex実装席は監視役のinbox指示を待つ。kitの契約・レビュー規則がSkillに優先する。単独作業にpair-watchは不要。
 - 新しい規則・手順の置き場所判断：`docs/instruction-placement.md`
 - Skillの新規作成・改訂：`docs/skill-authoring.md`
 - 個人PCのmodel保存先、時刻・log既定：存在する場合だけ `~/.codex/local-policies/local-environment.md`（これはkit外の個人設定で、Codex利用者のみ）
@@ -141,16 +134,16 @@
 
 ## 12. 本ファイルの保守
 
-規則をここへ追加するのは、次をすべて満たす場合だけとする。
+規則を追加するのは、次をすべて満たす場合だけとする。
 
 1. ほとんどのproject・taskに適用される
-2. 数か月後も有効である可能性が高い
+2. 数か月後も有効である見込みが高い
 3. 作業開始前に知る必要がある
-4. test、type、lint、Hook、CI、scriptでより確実に強制できない
-5. project規則、task契約、Skill、local policyを重複せず短く書ける
+4. test・type・lint・Hook・CI・scriptでより確実に強制できない
+5. project規則・契約・Skill・local policyを重複せず短く書ける
 
-繰り返す手順はSkillへ、project固有事項はprojectの `AGENTS.md` へ、今回だけの条件はtask契約へ移す。個人環境はlocal policyへ、機械判定可能な規則はtoolingへ移す。本共通ファイルへの追加・変更は、原則としてユーザー確認を得て行う。
+繰り返す手順はSkill、project固有事項はproject規則、今回だけの条件は契約、個人環境はlocal policy、機械判定できる規則はtoolingへ置く。迷う場合は `docs/instruction-placement.md` に従う。共通規則の追加・変更は原則ユーザー確認を得る。
 
-本ファイルやprojectの規則ファイルを編集したら、その変更を未commitのまま放置せず適宜commitする（分け方は§8の1commit 1目的に従う。公開repositoryでは§8のとおりbranchへcommitし、mainへの取り込みはPR経由とする）。編集対象ファイルに他セッション由来の未commit差分があっても、規則変更のcommitを保留する理由にしない。
+規則ファイルの変更は§8に従い適宜commitし、未commitで放置しない。他セッションの未commit差分を理由に規則変更のcommitを保留しないが、他の差分を巻き込まない。公開repoではbranchへcommitし、PR経由で取り込む。
 
-逆方向も同じく禁止する。上の5条件を満たす一般規則（全projectに通用する作法・権限境界・品質基準）を、個別projectの `AGENTS.md` へ書かない。projectのAGENTSへ書くのはそのproject固有の差分だけとし、一般規則が必要になったら本ファイルへの追加をユーザーへ提案する。迷う場合は `instruction-placement.md` の判定順に従う。
+上の5条件を満たす一般規則を個別projectの規則へ逃がすことも禁止する。project規則は固有の差分だけとし、一般規則は本ファイルへの追加をユーザーへ提案する。

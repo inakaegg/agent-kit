@@ -2,6 +2,14 @@
 
 この文書はGit、GitHub、registry、release、deploy等の作業のときだけ読む。project固有ルールとbranch protectionを優先する。
 
+## 作業場所とrepositoryの区分
+
+- 機能追加、バグ修正、refactorなど、コードまたは製品挙動を変更する作業は `main` のcheckoutで行わない。task専用の新規branchと別worktreeを作成してから編集する（`REQUIRE_WORKTREE=false` のときは別worktree不要、task branchのみでよい）。ただし編集・commit・branch切替を行い得る他のセッションが同じcheckoutを使っているときは、`REQUIRE_WORKTREE` の値や変更の種類によらず、git管理下のファイルの編集とcommitをtask branchの別worktreeで行う。いないと確認できないときも同様とし、read-onlyの調査・レビューだけのセッションは数えない。他のセッションのbranch切替でHEADが動き、commitが意図しないbranchへ乗るためである。git管理外の `_ai/` は`AGENTS.md` §2のとおりmain checkout側へ書く。既にそのtask専用のlinked worktreeにいて、編集し得る他のセッションがそれを使っていない場合は、新しいworktreeを重ねて作らない。merge済みのworktreeは `AUTO_PRUNE_WORKTREES=true` なら許可なく削除してよい（未commit差分・ignoredなローカルファイルが残るものは除く。確認手順は本書§6）。branchはgraphでつながりを見るために残し、削除は明示許可がある場合だけ行う。
+- 公開repositoryでは、誤字修正などの軽微な文書更新も含め、`main`（master等のdefault branch）への取り込みを常にPR経由とし、mainへ直接commit・pushしない。軽微な文書更新もtask branchを作って編集・commitする（別worktreeは不要。ただし他のセッションと同じcheckoutを使う場合は前項のとおり別worktreeを作る）。push・PR作成は`AGENTS.md` §3のとおり明示許可を得てから行い、許可がない間はbranchへのcommitと報告に留める。公開か確認できないrepositoryは公開として扱い、非公開でも他者と共有するrepositoryは公開と同じ扱いとする。
+- ユーザーが管理権限を持つ公開repositoryには、branch protectionを設定して上記を機械的にも強制する。設定・変更の実行は`AGENTS.md` §3のとおり明示許可を得て行い、protectionの内容と公開状態の確認手順は本書§6 に従う。
+- 他者と共有しない非公開repositoryでは従来どおり、軽微な文書更新に限り、branchとstatusを確認し他作業の差分を巻き込まない場合だけ `main` のcheckoutで行ってよい。他のセッションと同じcheckoutを使う場合は、この場合もtask branchと別worktreeを作る。
+- コード・製品挙動の変更か軽微な文書更新か、またはrepositoryの公開・共有の区分を判断できない場合は、編集を始める前にユーザーへ確認する。
+
 ## 1. 作業開始前
 
 - `git status -sb`、現在branch、remote、base、既存差分を確認する。
@@ -51,7 +59,7 @@
 
 ## 5. merge・履歴改変
 
-- mergeは、そのターンの明示依頼、required CI成功、最新headへのreview完了、未確認範囲の確認がある場合だけ行う。`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、明示依頼の代わりに「必要なレビューがすべてLGTM」を条件にローカルmergeしてよい（`AGENTS.md` §3）。
+- mergeは、そのターンの明示依頼、required CI成功、最新headへのreview完了、未確認範囲の確認がある場合だけ行う。`AUTO_MERGE_PRIVATE=true` の非公開・非共有repositoryでは、明示依頼の代わりに「必要なレビューがすべてLGTMで、暫定通過のやり直しが済んでいる」を条件にローカルmergeしてよい（`AGENTS.md` §3）。自己検証・記録付きの例外通過は、この許可なしmergeの条件を満たさない。
 - project規則がない通常のGitHub開発では、`feature branch → PR → CI → merge commit` を既定とする。squash mergeはbranchとbaseの繋がりをgraphから消し、取り込み済み判定を壊すため使わない。ユーザーが明示指示した場合だけ例外とする。
 - localでfeature branchをbaseへ取り込む場合は `git merge --no-ff` を使い、fast-forwardでmerge commitを省略しない。
 - shared historyのrebase、squash、force push、base branch直接pushは行わない。明示合意とteam方針がある場合だけ例外とする。

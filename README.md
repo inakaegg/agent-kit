@@ -4,13 +4,13 @@
 
 A set of working rules (`AGENTS.md`), task-specific playbooks (skills), templates, and verification scripts shared by Codex and Claude Code. This is not a generic boilerplate: it is the setup I actually run for solo development, frozen as is (opinionated by design).
 
-Agents always load only the 160-line `AGENTS.md`. Detailed procedures live in skills. Task acceptance criteria, working hypotheses, and durable specs live in separate files (see `templates/`). Machine-checkable rules live in verification scripts. The kit's job is to keep permission boundaries and stop conditions identical across Codex and Claude Code on every project. Push, publication, and billing always require explicit human approval.
+The always-loaded rules live in `AGENTS.md`, with `CLAUDE.md` as the Claude Code adapter. Agents also read the applicable settings. Policies and skills provide detailed instructions when the task calls for them. The validator limits both line count and character count to keep the entry points compact. Task acceptance criteria, working hypotheses, and durable specs live in separate files (see `templates/`). Machine-checkable rules live in verification scripts. The kit's job is to keep permission boundaries and stop conditions identical across Codex and Claude Code on every project. Push, publication, and billing always require explicit human approval.
 
 ## Design principles
 
 1. **Enforce rules with machines, not documents**. Rules that exist only in a policy document get followed inconsistently. So the policy document stays a thin entry point. The real enforcement is checks that fail when a rule is broken: `scripts/validate-kit.py`, the pre-commit and pre-push hooks in `git-hooks/`, and tests. When written reminders about the same rule keep accumulating, the rule moves into lint / tests / hooks / CI. The placement procedure is `docs/instruction-placement.md`.
 
-2. **Fully autonomous loops are only for closed tasks with machine-checkable success**. Except for work whose "done" can be judged by tests or numbers — bulk migrations, lint sweeps — agents are not run unattended. Most software development surfaces unclear points mid-build, and the spec settles through questions and decisions. So the default is a supervised pair setup: implementer plus watcher across two sessions (the [pair-watch](https://github.com/inakaegg/pair-watch) plugin). Extend the autonomous stretch, but return to a human exactly at the real decision points.
+2. **Fully autonomous loops are only for closed tasks with machine-checkable success**. Except for work whose "done" can be judged by tests or numbers — bulk migrations, lint sweeps — agents are not run unattended. Most software development surfaces unclear points mid-build, and the spec settles through questions and decisions. When work is split across sessions, the default is a supervised pair setup: implementer plus watcher across two sessions (the [pair-watch](https://github.com/inakaegg/pair-watch) plugin). Extend the autonomous stretch, but return to a human exactly at the real decision points.
 
 3. **Verification means evidence, not self-report**. Non-trivial changes are reviewed through gates by a reviewer whose context is separate from the implementer's (`skills/independent-review/`). The foundation under everything else is one rule: never report a command as executed when it was not.
 
@@ -114,7 +114,7 @@ for skill_dir in "$agent_kit_dir"/skills/*; do
 done
 ```
 
-The two-seat setup (`$pair-watch`) is not under `skills/`, so the symlinks above do not install it. Add it as a Claude Code plugin:
+For work split across multiple sessions, use `$pair-watch`. It is not under `skills/`, so the symlinks above do not install it. Single-session work can follow the normal work loop without this plugin. If paired work is explicitly requested and the plugin is missing, confirm how to add it rather than silently switching to a single session. The Claude Code installation commands are:
 
 ```text
 /plugin marketplace add https://github.com/inakaegg/pair-watch
@@ -270,7 +270,7 @@ python3 scripts/validate-kit.py
 python3 -m unittest discover -s tests -v
 ```
 
-The checks cover required files / skill frontmatter / reference targets / personal or machine-specific info / `AGENTS.md` size / the Claude adapter.
+The checks cover required files, skill frontmatter, reference targets, personal or machine-specific information, instruction size, and the Claude adapter. `AGENTS.md` must have 60–160 lines and at most 11,000 characters; `CLAUDE.md` must have at most 2,000 characters. Characters are counted after decoding UTF-8 and normalizing CRLF/CR to LF, including actual newlines. These limits measure text size, not tokens, cost, or response quality.
 
 ## Matching official docs
 

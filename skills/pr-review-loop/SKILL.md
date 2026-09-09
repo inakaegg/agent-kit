@@ -98,7 +98,7 @@ botのLGTMだけで自分のreviewを省略しない。逆に、false positive�
 
 ## 7. iteration上限
 
-bot reviewの反復は最大2iteration。3巡目以降の指摘は課題として記録し、PRは収束扱いにする（正しさ・security・データ消失・互換性に関わる修正必須を除く）。bot指摘の仕分け既定（P0・P1相当だけ修正必須、P2以下は記録のみ）は `docs/policies/review.md` に従う。
+bot reviewの反復は2iterationを既定とする。3巡目以降の軽微な指摘は課題として記録し収束させる。ただし確認済みの正しさ・security・データ消失・互換性・明示要件違反（合格条件の検証不能を含む）はMUST-FIXのままとし、優先度・件数・巡回数だけで格下げしない。修正必須が残れば解消を確認してから収束させ、対応不能なら停止する。P0・P1相当も修正必須、それ以外のP2以下は記録のみとする（full kitでは `docs/policies/review.md`）。
 
 次の場合は上限前でも停止する。
 
